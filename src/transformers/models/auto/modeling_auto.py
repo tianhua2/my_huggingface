@@ -19,8 +19,6 @@ import warnings
 from collections import OrderedDict
 
 from ...utils import logging
-
-# Add modeling imports here
 from ..albert.modeling_albert import (
     AlbertForMaskedLM,
     AlbertForMultipleChoice,
@@ -209,6 +207,9 @@ from ..mpnet.modeling_mpnet import (
 from ..mt5.modeling_mt5 import MT5ForConditionalGeneration, MT5Model
 from ..openai.modeling_openai import OpenAIGPTForSequenceClassification, OpenAIGPTLMHeadModel, OpenAIGPTModel
 from ..pegasus.modeling_pegasus import PegasusForCausalLM, PegasusForConditionalGeneration, PegasusModel
+
+# Add modeling imports here
+from ..pit.modeling_pit import PiTForImageClassification, PiTModel
 from ..prophetnet.modeling_prophetnet import ProphetNetForCausalLM, ProphetNetForConditionalGeneration, ProphetNetModel
 from ..rag.modeling_rag import (  # noqa: F401 - need to import all RagModels to be in globals() function
     RagModel,
@@ -320,6 +321,7 @@ from .configuration_auto import (
     MT5Config,
     OpenAIGPTConfig,
     PegasusConfig,
+    PiTConfig,
     ProphetNetConfig,
     ReformerConfig,
     RetriBertConfig,
@@ -344,6 +346,7 @@ logger = logging.get_logger(__name__)
 MODEL_MAPPING = OrderedDict(
     [
         # Base model mapping
+        (PiTConfig, PiTModel),
         (DeiTConfig, DeiTModel),
         (LukeConfig, LukeModel),
         (GPTNeoConfig, GPTNeoModel),
@@ -519,6 +522,7 @@ MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING = OrderedDict(
         # Model for Image Classification mapping
         (ViTConfig, ViTForImageClassification),
         (DeiTConfig, (DeiTForImageClassification, DeiTForImageClassificationWithTeacher)),
+        (PiTConfig, PiTForImageClassification),
     ]
 )
 
