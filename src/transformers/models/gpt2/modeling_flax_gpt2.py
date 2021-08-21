@@ -425,8 +425,9 @@ class FlaxGPT2BlockCollection(nn.Module):
     dtype: jnp.dtype = jnp.float32
 
     def setup(self):
+        block_cls = nn.remat(FlaxGPT2Block, concrete=True) if self.config.gradient_checkpointing else FlaxGPT2Block
         self.blocks = [
-            FlaxGPT2Block(self.config, name=str(i), dtype=self.dtype) for i in range(self.config.num_hidden_layers)
+            block_cls(self.config, name=str(i), dtype=self.dtype) for i in range(self.config.num_hidden_layers)
         ]
 
     def __call__(
@@ -449,9 +450,9 @@ class FlaxGPT2BlockCollection(nn.Module):
             layer_outputs = block(
                 hidden_states,
                 attention_mask,
-                deterministic=deterministic,
-                init_cache=init_cache,
-                output_attentions=output_attentions,
+                deterministic,
+                init_cache,
+                output_attentions,
             )
             hidden_states = layer_outputs[0]
 
