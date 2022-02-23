@@ -228,6 +228,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("gpt_neo", "GPTNeoForCausalLM"),
         ("big_bird", "BigBirdForCausalLM"),
         ("camembert", "CamembertForCausalLM"),
+        ("distilbert", "DistilBertForCausalLM"),
         ("xlm-roberta-xl", "XLMRobertaXLForCausalLM"),
         ("xlm-roberta", "XLMRobertaForCausalLM"),
         ("roberta", "RobertaForCausalLM"),
