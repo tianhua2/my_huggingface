@@ -4309,7 +4309,7 @@ else:
 
     _import_structure["models.idefics"].extend(
         [
-            "TFIDEFICS_PRETRAINED_MODEL_ARCHIVE_LIST",
+            "TF_IDEFICS_PRETRAINED_MODEL_ARCHIVE_LIST",
             "TFIdeficsForVisionText2Text",
             "TFIdeficsModel",
             "TFIdeficsPreTrainedModel",
@@ -8746,7 +8746,7 @@ if TYPE_CHECKING:
             TFHubertPreTrainedModel,
         )
         from .models.idefics import (
-            TFIDEFICS_PRETRAINED_MODEL_ARCHIVE_LIST,
+            TF_IDEFICS_PRETRAINED_MODEL_ARCHIVE_LIST,
             TFIdeficsForVisionText2Text,
             TFIdeficsModel,
             TFIdeficsPreTrainedModel,
