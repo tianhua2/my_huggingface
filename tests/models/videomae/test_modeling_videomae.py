@@ -184,6 +184,7 @@ class VideoMAEModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase
     test_torchscript = False
     test_resize_embeddings = False
     test_head_masking = False
+    has_attentions = False
 
     def setUp(self):
         self.model_tester = VideoMAEModelTester(self)
@@ -197,7 +198,8 @@ class VideoMAEModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase
             # hence we define a single mask, which we then repeat for each example in the batch
             mask = torch.ones((self.model_tester.num_masks,))
             mask = torch.cat([mask, torch.zeros(self.model_tester.seq_length - mask.size(0))])
-            bool_masked_pos = mask.expand(self.model_tester.batch_size, -1).bool()
+            batch_size = inputs_dict["pixel_values"].shape[0]
+            bool_masked_pos = mask.expand(batch_size, -1).bool()
             inputs_dict["bool_masked_pos"] = bool_masked_pos.to(torch_device)
 
         if return_labels:

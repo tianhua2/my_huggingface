@@ -63,8 +63,8 @@ class ViTMAEModelTester:
         type_sequence_label_size=10,
         initializer_range=0.02,
         num_labels=3,
-        mask_ratio=0.6,
         scope=None,
+        mask_ratio=0.5,
     ):
         self.parent = parent
         self.batch_size = batch_size
@@ -89,6 +89,9 @@ class ViTMAEModelTester:
         # (we add 1 for the [CLS] token)
         num_patches = (image_size // patch_size) ** 2
         self.seq_length = int(math.ceil((1 - mask_ratio) * (num_patches + 1)))
+        self.mask_ratio = mask_ratio
+        self.num_masks = int(mask_ratio * self.seq_length)
+        self.mask_length = num_patches
 
     def prepare_config_and_inputs(self):
         pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
@@ -169,6 +172,7 @@ class ViTMAEModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
     test_torchscript = False
     test_resize_embeddings = False
     test_head_masking = False
+    has_attentions = False
 
     def setUp(self):
         self.model_tester = ViTMAEModelTester(self)

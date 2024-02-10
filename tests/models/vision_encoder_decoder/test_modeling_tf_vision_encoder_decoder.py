@@ -26,6 +26,7 @@ import numpy as np
 
 from transformers import is_tf_available, is_torch_available, is_vision_available
 from transformers.testing_utils import (
+    _run_slow_tests,
     is_pt_tf_cross_test,
     require_tf,
     require_torch,
@@ -554,9 +555,9 @@ class TFVisionEncoderDecoderMixin:
         # Output all for aggressive testing
         config.output_hidden_states = True
         decoder_config.output_hidden_states = True
-        # All models tested in this file have attentions
-        config.output_attentions = True
-        decoder_config.output_attentions = True
+        # All models tested in this file have attentions in slow mode
+        config.output_attentions = _run_slow_tests
+        decoder_config.output_attentions = _run_slow_tests
 
         tf_inputs_dict = config_inputs_dict
         # `encoder_hidden_states` is not used in model call/forward

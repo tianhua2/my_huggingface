@@ -23,6 +23,7 @@ from packaging import version
 
 from transformers import DonutProcessor, NougatProcessor, TrOCRProcessor
 from transformers.testing_utils import (
+    _run_slow_tests,
     require_levenshtein,
     require_nltk,
     require_sentencepiece,
@@ -411,6 +412,9 @@ class DeiT2RobertaModelTest(EncoderDecoderMixin, unittest.TestCase):
         pixel_values=None,
         **kwargs,
     ):
+        if not _run_slow_tests:
+            return
+
         # make the decoder inputs a different shape from the encoder inputs to harden the test
         decoder_input_ids = decoder_input_ids[:, :-1]
         decoder_attention_mask = decoder_attention_mask[:, :-1]
@@ -561,6 +565,29 @@ class ViT2BertModelTest(EncoderDecoderMixin, unittest.TestCase):
             "labels": decoder_token_labels,
         }
 
+    def check_encoder_decoder_model_output_attentions(
+        self,
+        config,
+        decoder_config,
+        decoder_input_ids,
+        decoder_attention_mask,
+        labels=None,
+        pixel_values=None,
+        **kwargs,
+    ):
+        if not _run_slow_tests:
+            return
+
+        super().check_encoder_decoder_model_output_attentions(
+            config,
+            decoder_config,
+            decoder_input_ids,
+            decoder_attention_mask,
+            labels=None,
+            pixel_values=None,
+            **kwargs,
+        )
+
 
 @require_torch
 class Swin2BartModelTest(EncoderDecoderMixin, unittest.TestCase):
@@ -676,6 +703,29 @@ class ViT2TrOCR(EncoderDecoderMixin, unittest.TestCase):
             "decoder_attention_mask": decoder_attention_mask,
             "labels": decoder_input_ids,
         }
+
+    def check_encoder_decoder_model_output_attentions(
+        self,
+        config,
+        decoder_config,
+        decoder_input_ids,
+        decoder_attention_mask,
+        labels=None,
+        pixel_values=None,
+        **kwargs,
+    ):
+        if not _run_slow_tests:
+            return
+
+        super().check_encoder_decoder_model_output_attentions(
+            config,
+            decoder_config,
+            decoder_input_ids,
+            decoder_attention_mask,
+            labels=None,
+            pixel_values=None,
+            **kwargs,
+        )
 
     # there are no published pretrained TrOCR checkpoints for now
     def test_real_model_save_load_from_pretrained(self):

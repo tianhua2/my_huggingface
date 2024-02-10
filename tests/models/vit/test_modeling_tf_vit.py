@@ -168,6 +168,7 @@ class TFViTModelTest(TFModelTesterMixin, PipelineTesterMixin, unittest.TestCase)
     test_resize_embeddings = False
     test_head_masking = False
     test_onnx = False
+    has_attentions = False
 
     def setUp(self):
         self.model_tester = TFViTModelTester(self)

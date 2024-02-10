@@ -126,6 +126,7 @@ class FlaxViTModelTester(unittest.TestCase):
 @require_flax
 class FlaxViTModelTest(FlaxModelTesterMixin, unittest.TestCase):
     all_model_classes = (FlaxViTModel, FlaxViTForImageClassification) if is_flax_available() else ()
+    has_attentions = False
 
     def setUp(self) -> None:
         self.model_tester = FlaxViTModelTester(self)

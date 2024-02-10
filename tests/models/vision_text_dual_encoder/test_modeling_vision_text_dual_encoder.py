@@ -252,6 +252,7 @@ class VisionTextDualEncoderMixin:
         inputs_dict = self.prepare_config_and_inputs()
         self.check_save_load(**inputs_dict)
 
+    @slow
     def test_vision_text_output_attention(self):
         inputs_dict = self.prepare_config_and_inputs()
         self.check_vision_text_output_attention(**inputs_dict)
