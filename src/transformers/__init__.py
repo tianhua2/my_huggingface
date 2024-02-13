@@ -906,6 +906,7 @@ _import_structure = {
         "VIVIT_PRETRAINED_CONFIG_ARCHIVE_MAP",
         "VivitConfig",
     ],
+    "models.vmamba": ["VMAMBA_PRETRAINED_CONFIG_ARCHIVE_MAP", "VMambaConfig"],
     "models.wav2vec2": [
         "WAV_2_VEC_2_PRETRAINED_CONFIG_ARCHIVE_MAP",
         "Wav2Vec2Config",
@@ -1417,6 +1418,7 @@ else:
             "load_tf_weights_in_albert",
         ]
     )
+
     _import_structure["models.align"].extend(
         [
             "ALIGN_PRETRAINED_MODEL_ARCHIVE_LIST",
@@ -3519,6 +3521,15 @@ else:
             "VivitForVideoClassification",
             "VivitModel",
             "VivitPreTrainedModel",
+        ]
+    )
+    _import_structure["models.vmamba"].extend(
+        [
+            "VMAMBA_PRETRAINED_MODEL_ARCHIVE_LIST",
+            "VMambaForImageClassification",
+            "VMambaModel",
+            "VMambaPreTrainedModel",
+            "load_tf_weights_in_vmamba",
         ]
     )
     _import_structure["models.wav2vec2"].extend(
@@ -5646,6 +5657,7 @@ if TYPE_CHECKING:
         VitsTokenizer,
     )
     from .models.vivit import VIVIT_PRETRAINED_CONFIG_ARCHIVE_MAP, VivitConfig
+    from .models.vmamba import VMAMBA_PRETRAINED_CONFIG_ARCHIVE_MAP, VMambaConfig
     from .models.wav2vec2 import (
         WAV_2_VEC_2_PRETRAINED_CONFIG_ARCHIVE_MAP,
         Wav2Vec2Config,
@@ -7565,8 +7577,6 @@ if TYPE_CHECKING:
             SamModel,
             SamPreTrainedModel,
         )
-
-        # PyTorch model imports
         from .models.seamless_m4t import (
             SEAMLESS_M4T_PRETRAINED_MODEL_ARCHIVE_LIST,
             SeamlessM4TCodeHifiGan,
@@ -7867,6 +7877,15 @@ if TYPE_CHECKING:
             VivitForVideoClassification,
             VivitModel,
             VivitPreTrainedModel,
+        )
+
+        # PyTorch model imports
+        from .models.vmamba import (
+            VMAMBA_PRETRAINED_MODEL_ARCHIVE_LIST,
+            VMambaForImageClassification,
+            VMambaModel,
+            VMambaPreTrainedModel,
+            load_tf_weights_in_vmamba,
         )
         from .models.wav2vec2 import (
             WAV_2_VEC_2_PRETRAINED_MODEL_ARCHIVE_LIST,
