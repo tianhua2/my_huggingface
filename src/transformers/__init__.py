@@ -623,6 +623,10 @@ _import_structure = {
         "MOBILEVITV2_PRETRAINED_CONFIG_ARCHIVE_MAP",
         "MobileViTV2Config",
     ],
+    "models.mot": [
+        "MOT_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "MoTConfig",
+    ],
     "models.mpnet": [
         "MPNET_PRETRAINED_CONFIG_ARCHIVE_MAP",
         "MPNetConfig",
@@ -2707,6 +2711,20 @@ else:
             "MobileViTV2ForSemanticSegmentation",
             "MobileViTV2Model",
             "MobileViTV2PreTrainedModel",
+        ]
+    )
+    _import_structure["models.mot"].extend(
+        [
+            "MOT_PRETRAINED_MODEL_ARCHIVE_LIST",
+            "MoTDoubleHeadsModel",
+            "MoTForQuestionAnswering",
+            "MoTForSequenceClassification",
+            "MoTForTokenClassification",
+            "MoTLMHeadModel",
+            "MoTModel",
+            "MoTMLP",
+            "MoTPreTrainedModel",
+            "load_tf_weights_in_mot",
         ]
     )
     _import_structure["models.mpnet"].extend(
@@ -5406,6 +5424,10 @@ if TYPE_CHECKING:
         MOBILEVITV2_PRETRAINED_CONFIG_ARCHIVE_MAP,
         MobileViTV2Config,
     )
+    from .models.mot import (
+        MOT_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        MoTConfig,
+    )
     from .models.mpnet import (
         MPNET_PRETRAINED_CONFIG_ARCHIVE_MAP,
         MPNetConfig,
@@ -7255,6 +7277,18 @@ if TYPE_CHECKING:
             MobileViTV2ForSemanticSegmentation,
             MobileViTV2Model,
             MobileViTV2PreTrainedModel,
+        )
+        from .models.mot import (
+            MOT_PRETRAINED_MODEL_ARCHIVE_LIST,
+            MoTDoubleHeadsModel,
+            MoTForQuestionAnswering,
+            MoTForSequenceClassification,
+            MoTForTokenClassification,
+            MoTLMHeadModel,
+            MoTModel,
+            MoTMLP,
+            MoTPreTrainedModel,
+            load_tf_weights_in_mot,
         )
         from .models.mpnet import (
             MPNET_PRETRAINED_MODEL_ARCHIVE_LIST,
