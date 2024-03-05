@@ -59,6 +59,8 @@ class GenerationConfig(PushToHubMixin):
             `constraints!=None` or `force_words_ids!=None`
         - *assisted decoding* by calling [`~generation.GenerationMixin.assisted_decoding`], if
             `assistant_model` is passed to `.generate()`
+        - *dola decoding* by calling [`~generation.GenerationMixin.dola_decoding`], if 
+            `dola_layers` is passed to `.generate()`
 
     You do not need to call any of the above methods directly. Pass custom parameter values to '.generate()'. To learn
     more about decoding strategies refer to the [text generation strategies guide](../generation_strategies).
@@ -257,6 +259,12 @@ class GenerationConfig(PushToHubMixin):
             - `"heuristic_transient"`: Same as `"heuristic"` but `num_assistant_tokens` is reset to its initial value after each generation call.
             - `"constant"`: `num_assistant_tokens` stays unchanged during generation
 
+        > Generation parameters exclusive to [dola decoding](https://arxiv.org/abs/2309.03883)
+
+        relative_top (`float`, *optional*):
+            The relative top value used in DoLa decoding. It is a float value between 0 and 1, which determines the subset of tokens to be considered in DoLa decoding.
+            See adaptive plausibility constraint in Section 2.3.
+
         > Parameters specific to the caching mechanism:
 
         cache_implementation (`str`, *optional*, default to `None`):
@@ -332,6 +340,9 @@ class GenerationConfig(PushToHubMixin):
         # Assistant generation
         self.num_assistant_tokens = kwargs.pop("num_assistant_tokens", 5)
         self.num_assistant_tokens_schedule = kwargs.pop("num_assistant_tokens_schedule", "heuristic")
+
+        # DoLa decoding
+        self.relative_top = kwargs.pop("relative_top", 0.1)
 
         # Cache implementation
         self.cache_implementation = kwargs.pop("cache_implementation", None)
