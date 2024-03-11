@@ -390,10 +390,13 @@ just like in multinomial sampling. However, in assisted decoding, reducing the t
 ['Alice and Bob are going to the same party. It is a small party, in a small']
 ```
 
+Alternativelly, you can also set the `prompt_lookup_num_tokens` to trigger n-gram based assisted decoding, as opposed
+to model based assisted decoding. You can read more about it [here](https://twitter.com/joao_gante/status/1747322413006643259).
+
 ### DoLa Decoding
 
 **D**ecoding by C**o**ntrasting **La**yers (DoLa) is a contrastive decoding strategy to improve the factuality and reduce the 
-hallucinations of LLMs, as described in this paper [DoLa: Decoding by Contrasting Layers Improves Factuality in Large Language Models](https://openreview.net/pdf?id=Th6NyL07na).
+hallucinations of LLMs, as described in this paper of ICLR 2024 [DoLa: Decoding by Contrasting Layers Improves Factuality in Large Language Models](https://openreview.net/pdf?id=Th6NyL07na).
 DoLa is achieved by contrasting the differences in logits obtained from final 
 layers versus earlier layers, thus amplify the factual knowledge localized to particular part of transformer layers. 
 To activate DoLa decoding, set the `dola_layers` argument when calling the `model.generate` function.
