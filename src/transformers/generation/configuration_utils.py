@@ -18,7 +18,7 @@ import copy
 import json
 import os
 import warnings
-from typing import TYPE_CHECKING, Any, List, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from .. import __version__
 from ..configuration_utils import PretrainedConfig
@@ -82,7 +82,7 @@ class GenerationConfig(PushToHubMixin):
             `constraints!=None` or `force_words_ids!=None`
         - *assisted decoding* by calling [`~generation.GenerationMixin._assisted_decoding`], if
             `assistant_model` or `prompt_lookup_num_tokens` is passed to `.generate()`
-        - *dola decoding* by calling [`~generation.GenerationMixin.dola_decoding`], if 
+        - *dola decoding* by calling [`~generation.GenerationMixin.dola_decoding`], if
             `dola_layers` is passed to `.generate()`
 
     You do not need to call any of the above methods directly. Pass custom parameter values to '.generate()'. To learn
@@ -464,7 +464,7 @@ class GenerationConfig(PushToHubMixin):
                     "You've set `assistant_model`, which triggers assisted generate. Currently, assisted generate "
                     "is only supported with Greedy Search and Sample."
                 )
-            
+
         # DoLa generation may extend some generation modes
         if dola_layers is not None:
             if generation_mode in ("greedy_search", "sample"):

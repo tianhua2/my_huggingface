@@ -1291,9 +1291,9 @@ class GenerationMixin:
             dola_layers (`str` or `List[int]`, *optional*):
                 The layers to use for DoLa decoding. If `None`, DoLa decoding is not used. If a string, it must
                 be one of "low" or "high", which means using the lower part or higher part of the model layers, respectively,
-                If a list of integers, it must contain the indices of the layers to use for candidate premature layers in DoLa. 
-                The 0-th layer is the word embedding layer of the model. For most of the cases, `dola_layers='low'` is recommended, 
-                as described in [DoLa: Decoding by Contrasting Layers Improves Factuality in Large Language 
+                If a list of integers, it must contain the indices of the layers to use for candidate premature layers in DoLa.
+                The 0-th layer is the word embedding layer of the model. For most of the cases, `dola_layers='low'` is recommended,
+                as described in [DoLa: Decoding by Contrasting Layers Improves Factuality in Large Language
                 Models](https://arxiv.org/abs/2309.03883).
             streamer (`BaseStreamer`, *optional*):
                 Streamer object that will be used to stream the generated sequences. Generated tokens are passed
@@ -1546,7 +1546,7 @@ class GenerationMixin:
                 streamer=streamer,
                 **model_kwargs,
             )
-            
+
         elif generation_mode == GenerationMode.GREEDY_SEARCH:
             # 11. run greedy search
             result = self._greedy_search(
@@ -1826,7 +1826,7 @@ class GenerationMixin:
     ) -> Union[GenerateNonBeamOutput, torch.LongTensor]:
         r"""
         Generates sequences of token ids for models with a language modeling head using **dola decoding** and
-        can be used for text-decoder, text-to-text, speech-to-text, and vision-to-text models. 
+        can be used for decoder-only text models.
         The method is based on the paper "DoLa: Decoding by Contrasting Layers Improves Factuality in Large Language Models" (https://arxiv.org/abs/2309.03883) in ICLR 2024.
 
         <Tip warning={true}>
@@ -1841,7 +1841,7 @@ class GenerationMixin:
             input_ids (`torch.LongTensor` of shape `(batch_size, sequence_length)`):
                 The sequence used as a prompt for the generation.
             dola_layers (`Union[str, List[int]]`, *optional*, defaults to `low`):
-                The candidate layers used in contrasting layers of DoLa. 
+                The candidate layers used in contrasting layers of DoLa.
                 It can be either 1) 'low' or 'high', which means the lower part or higher part of the model layers, respectively,
                 or 2) a list of layer indices to be used for candidate layers. The 0-th layer is the word embedding layer of the model.
             logits_processor (`LogitsProcessorList`, *optional*):
@@ -1941,7 +1941,7 @@ class GenerationMixin:
         ... )
 
         >>> tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        ['Today is a beautiful day, and we must do everything possible to make it a day of celebration.']
+        ['Today is a beautiful day, and you\'re welcome to enjoy it!"\n\nAfterwards, she']
         ```"""
         # init values
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
@@ -1993,11 +1993,11 @@ class GenerationMixin:
         this_peer_finished = False  # used by synced_gpus only
         # auto-regressive generation
         mature_layer = self.config.num_hidden_layers
-        if type(dola_layers) == str and dola_layers == 'low':
+        if isinstance(dola_layers, str) and dola_layers == 'low':
             candidate_premature_layers = list(range(0, mature_layer//2, 2)) if mature_layer <= 40 else list(range(0, 20, 2))
-        elif type(dola_layers) == str and dola_layers == 'high':
+        elif isinstance(dola_layers, str) and dola_layers == 'high':
             candidate_premature_layers = list(range(mature_layer//2, mature_layer, 2)) if mature_layer <= 40 else list(range(mature_layer - 20, mature_layer, 2))
-        elif type(dola_layers) == list:
+        elif isinstance(dola_layers, list):
             candidate_premature_layers = [i for i in dola_layers if i < mature_layer]
         else:
             raise ValueError("dola_layers must be either 'low', 'high' or a list of integers.")
@@ -5359,9 +5359,9 @@ def stack_model_outputs(model_outputs: List[ModelOutput]) -> ModelOutput:
 
 def relative_top_filter(scores: torch.FloatTensor, relative_top: float = 0.1, filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1) -> torch.FloatTensor:
     '''Reference: https://github.com/XiangLi1999/ContrastiveDecoding/blob/170e9142e92159c1237d731e240f5eb14aabf428/transformers/src/transformers/generation_logits_process.py#L235'''
-    scores_normalized = scores.log_softmax(dim=-1) 
+    scores_normalized = scores.log_softmax(dim=-1)
     sorted_logits, sorted_indices = torch.sort(scores_normalized, descending=True)
-    min_thresh = sorted_logits[..., min_tokens_to_keep-1] 
+    min_thresh = sorted_logits[..., min_tokens_to_keep-1]
     probs_max = torch.max(scores_normalized, dim=-1).values
     probs_thresh = probs_max + np.log(relative_top)
     probs_thresh = torch.min(min_thresh, probs_thresh)
