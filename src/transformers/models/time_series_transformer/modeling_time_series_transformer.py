@@ -1752,9 +1752,7 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
         repeated_enc_last_hidden = enc_last_hidden.repeat_interleave(repeats=num_parallel_samples, dim=0)
 
         future_samples = []
-        future_params = {
-            name: [] for name in self.parameter_projection.args_dim
-        }
+        future_params = {name: [] for name in self.parameter_projection.args_dim}
 
         # greedy decoding
         for k in range(self.config.prediction_length):
@@ -1790,6 +1788,6 @@ class TimeSeriesTransformerForPrediction(TimeSeriesTransformerPreTrainedModel):
             sequences=concat_future_samples.reshape(
                 (-1, num_parallel_samples, self.config.prediction_length) + self.target_shape,
             ),
-            params = concat_future_params,
-            distribution = self.config.distribution_output 
+            params=concat_future_params,
+            distribution=self.config.distribution_output,
         )
