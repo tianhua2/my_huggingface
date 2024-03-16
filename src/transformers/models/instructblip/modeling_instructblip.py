@@ -1370,6 +1370,36 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         >>> generated_text = processor.batch_decode(outputs, skip_special_tokens=True)[0].strip()
         >>> print(generated_text)
         The unusual aspect of this image is that a man is ironing clothes on the back of a yellow SUV, which is parked in the middle of a busy city street. This is an unconventional approach to ironing clothes, as it requires the man to balance himself and his ironing equipment on top of the vehicle while navigating through traffic. Additionally, the presence of taxis and other vehicles in the scene further emphasizes the unusual nature of this situation.
+
+        # To generate from video input
+        >>> from huggingface_hub import hf_hub_download
+        >>> from decord import VideoReader
+        >>> file_path = hf_hub_download(
+                repo_id="nielsr/video-demo", filename="eating_spaghetti.mp4", repo_type="dataset"
+            )
+
+        >>> vr = VideoReader(uri=file_path, height=224, width=224)
+        >>> start, end = 0, len(vr)
+        >>> indices = np.arange(start, end, vlen / 4).astype(int)
+        >>> frames = vr.get_batch(indices).asnumpy()
+        >>> video = list(frames)
+        >>> prompt = "What is happening in the video?"
+        >>> inputs = processor(videos=[video], text=prompt, return_tensors="pt").to(device)
+
+        >>> outputs = model.generate(
+        ...     **inputs,
+        ...     do_sample=False,
+        ...     num_beams=5,
+        ...     max_length=256,
+        ...     min_length=1,
+        ...     top_p=0.9,
+        ...     repetition_penalty=1.5,
+        ...     length_penalty=1.0,
+        ...     temperature=1,
+        ... )
+        >>> generated_text = processor.batch_decode(outputs, skip_special_tokens=True)[0].strip()
+        >>> print(generated_text)
+        "A person is eating a bowl of pasta, and they are using a fork to eat it. The person is sitting at a table, and the plate of pasta is on the table in front"
         ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1480,8 +1510,8 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         Overrides `generate` function to be able to use the model as a conditional generator.
 
         Args:
-            pixel_values (`torch.FloatTensor` of shape (batch_size, num_channels, height, width)):
-                Input images to be processed.
+           pixel_values (`torch.FloatTensor` of shape (batch_size, num_channels, height, width) or
+                (batch_size, num_frames, num_channels, height, width)): Input images or videos to be processed.
             qformer_input_ids (`torch.LongTensor` of shape (batch_size, sequence_length), *optional*):
                 The sequence used as a prompt to be fed to the Q-Former module.
             qformer_attention_mask (`torch.LongTensor` of shape (batch_size, sequence_length), *optional*):
@@ -1499,29 +1529,66 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
             self._preprocess_accelerate()
 
         batch_size = pixel_values.shape[0]
-        image_embeds = self.vision_model(pixel_values, return_dict=True).last_hidden_state
+        if pixel_values.dim() == 5:  # B T C H W
+            language_model_inputs, language_attention_mask = [], []
+            for j in range(pixel_values.size(1)):
+                one_frame = pixel_values[:, j, :, :, :]
+                frame_embeds = self.vision_model(one_frame, return_dict=True).last_hidden_state
+                frame_attention_mask = torch.ones(frame_embeds.size()[:-1], dtype=torch.long, device=one_frame.device)
 
-        image_attention_mask = torch.ones(image_embeds.size()[:-1], dtype=torch.long, device=image_embeds.device)
+                query_tokens = self.query_tokens.expand(frame_embeds.shape[0], -1, -1)
+                query_attention_mask = torch.ones(
+                    query_tokens.size()[:-1], dtype=torch.long, device=frame_embeds.device
+                )
+                qformer_attention_mask_current_frame = (
+                    qformer_attention_mask
+                    if qformer_attention_mask is not None
+                    else torch.ones_like(qformer_input_ids)
+                )
+                qformer_attention_mask_current_frame = torch.cat(
+                    [query_attention_mask, qformer_attention_mask_current_frame], dim=1
+                )
+                query_outputs = self.qformer(
+                    input_ids=qformer_input_ids,
+                    attention_mask=qformer_attention_mask_current_frame,
+                    query_embeds=query_tokens,
+                    encoder_hidden_states=frame_embeds,
+                    encoder_attention_mask=frame_attention_mask,
+                    return_dict=True,
+                )
+                query_output = query_outputs.last_hidden_state[:, : query_tokens.size(1), :]
 
-        query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
-        query_attention_mask = torch.ones(query_tokens.size()[:-1], dtype=torch.long, device=image_embeds.device)
-        if qformer_attention_mask is None:
-            qformer_attention_mask = torch.ones_like(qformer_input_ids)
-        qformer_attention_mask = torch.cat([query_attention_mask, qformer_attention_mask], dim=1)
-        query_outputs = self.qformer(
-            input_ids=qformer_input_ids,
-            attention_mask=qformer_attention_mask,
-            query_embeds=query_tokens,
-            encoder_hidden_states=image_embeds,
-            encoder_attention_mask=image_attention_mask,
-            return_dict=True,
-        )
-        query_output = query_outputs.last_hidden_state[:, : query_tokens.size(1), :]
+                model_inputs_qformer = self.language_projection(query_output)
+                attention_mask_qformer = torch.ones(
+                    model_inputs_qformer.size()[:-1], dtype=torch.long, device=model_inputs_qformer.device
+                )
+                language_model_inputs.append(model_inputs_qformer)
+                language_attention_mask.append(attention_mask_qformer)
+            language_model_inputs = torch.cat(language_model_inputs, dim=1)
+            language_attention_mask = torch.cat(language_attention_mask, dim=1)
+        else:
+            image_embeds = self.vision_model(pixel_values, return_dict=True).last_hidden_state
+            image_attention_mask = torch.ones(image_embeds.size()[:-1], dtype=torch.long, device=image_embeds.device)
 
-        language_model_inputs = self.language_projection(query_output)
-        language_attention_mask = torch.ones(
-            language_model_inputs.size()[:-1], dtype=torch.long, device=language_model_inputs.device
-        )
+            query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
+            query_attention_mask = torch.ones(query_tokens.size()[:-1], dtype=torch.long, device=image_embeds.device)
+            if qformer_attention_mask is None:
+                qformer_attention_mask = torch.ones_like(qformer_input_ids)
+            qformer_attention_mask = torch.cat([query_attention_mask, qformer_attention_mask], dim=1)
+            query_outputs = self.qformer(
+                input_ids=qformer_input_ids,
+                attention_mask=qformer_attention_mask,
+                query_embeds=query_tokens,
+                encoder_hidden_states=image_embeds,
+                encoder_attention_mask=image_attention_mask,
+                return_dict=True,
+            )
+            query_output = query_outputs.last_hidden_state[:, : query_tokens.size(1), :]
+
+            language_model_inputs = self.language_projection(query_output)
+            language_attention_mask = torch.ones(
+                language_model_inputs.size()[:-1], dtype=torch.long, device=language_model_inputs.device
+            )
 
         if input_ids is None:
             input_ids = (

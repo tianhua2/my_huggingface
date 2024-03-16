@@ -29,15 +29,15 @@ from ..auto import AutoTokenizer
 
 class InstructBlipProcessor(ProcessorMixin):
     r"""
-    Constructs an InstructBLIP processor which wraps a BLIP image processor and a LLaMa/T5 tokenizer into a single
+    Constructs an InstructBLIP processor which wraps a InstructBLIP image processor and a LLaMa/T5 tokenizer into a single
     processor.
 
-    [`InstructBlipProcessor`] offers all the functionalities of [`BlipImageProcessor`] and [`AutoTokenizer`]. See the
-    docstring of [`~BlipProcessor.__call__`] and [`~BlipProcessor.decode`] for more information.
+    [`InstructBlipProcessor`] offers all the functionalities of [`InstructBlipImageProcessor`] and [`AutoTokenizer`]. See the
+    docstring of [`~InstructBlipProcessor.__call__`] and [`~InstructBlipProcessor.decode`] for more information.
 
     Args:
-        image_processor (`BlipImageProcessor`):
-            An instance of [`BlipImageProcessor`]. The image processor is a required input.
+        image_processor (`InstructBlipImageProcessor`):
+            An instance of [`InstructBlipImageProcessor`]. The image processor is a required input.
         tokenizer (`AutoTokenizer`):
             An instance of ['PreTrainedTokenizer`]. The tokenizer is a required input.
         qformer_tokenizer (`AutoTokenizer`):
@@ -45,7 +45,7 @@ class InstructBlipProcessor(ProcessorMixin):
     """
 
     attributes = ["image_processor", "tokenizer"]
-    image_processor_class = "BlipImageProcessor"
+    image_processor_class = "InstructBlipImageProcessor"
     tokenizer_class = "AutoTokenizer"
 
     def __init__(self, image_processor, tokenizer, qformer_tokenizer):
@@ -57,6 +57,7 @@ class InstructBlipProcessor(ProcessorMixin):
     def __call__(
         self,
         images: ImageInput = None,
+        videos: ImageInput = None,
         text: Union[TextInput, PreTokenizedInput, List[TextInput], List[PreTokenizedInput]] = None,
         add_special_tokens: bool = True,
         padding: Union[bool, str, PaddingStrategy] = False,
@@ -75,13 +76,13 @@ class InstructBlipProcessor(ProcessorMixin):
         **kwargs,
     ) -> BatchFeature:
         """
-        This method uses [`BlipImageProcessor.__call__`] method to prepare image(s) for the model, and
+        This method uses [`InstructBlipImageProcessor.__call__`] method to prepare image(s) or video(s) for the model, and
         [`BertTokenizerFast.__call__`] to prepare text for the model.
 
         Please refer to the docstring of the above two methods for more information.
         """
-        if images is None and text is None:
-            raise ValueError("You have to specify at least images or text.")
+        if images is None and text is None and videos is None:
+            raise ValueError("You have to specify at least images or text or videos.")
 
         encoding = BatchFeature()
 
@@ -126,8 +127,8 @@ class InstructBlipProcessor(ProcessorMixin):
             encoding["qformer_input_ids"] = qformer_text_encoding.pop("input_ids")
             encoding["qformer_attention_mask"] = qformer_text_encoding.pop("attention_mask")
 
-        if images is not None:
-            image_encoding = self.image_processor(images, return_tensors=return_tensors)
+        if images is not None or videos is not None:
+            image_encoding = self.image_processor(images=images, videos=videos, return_tensors=return_tensors)
             encoding.update(image_encoding)
 
         return encoding
