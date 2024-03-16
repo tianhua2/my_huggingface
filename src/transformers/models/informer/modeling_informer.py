@@ -2054,4 +2054,3 @@ class InformerForPrediction(InformerPreTrainedModel):
             params=concat_future_params,
             distribution=self.config.distribution_output,
         )
-    
