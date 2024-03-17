@@ -1529,66 +1529,42 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
             self._preprocess_accelerate()
 
         batch_size = pixel_values.shape[0]
-        if pixel_values.dim() == 5:  # B T C H W
-            language_model_inputs, language_attention_mask = [], []
-            for j in range(pixel_values.size(1)):
-                one_frame = pixel_values[:, j, :, :, :]
-                frame_embeds = self.vision_model(one_frame, return_dict=True).last_hidden_state
-                frame_attention_mask = torch.ones(frame_embeds.size()[:-1], dtype=torch.long, device=one_frame.device)
+        # if video is passed as input, we process batched, later unbatch it back
+        if pixel_values.dim() == 5:
+            _, frames, channel, height, width = pixel_values.shape
+            pixel_values = pixel_values.reshape(batch_size * frames, channel, height, width)
 
-                query_tokens = self.query_tokens.expand(frame_embeds.shape[0], -1, -1)
-                query_attention_mask = torch.ones(
-                    query_tokens.size()[:-1], dtype=torch.long, device=frame_embeds.device
-                )
-                qformer_attention_mask_current_frame = (
-                    qformer_attention_mask
-                    if qformer_attention_mask is not None
-                    else torch.ones_like(qformer_input_ids)
-                )
-                qformer_attention_mask_current_frame = torch.cat(
-                    [query_attention_mask, qformer_attention_mask_current_frame], dim=1
-                )
-                query_outputs = self.qformer(
-                    input_ids=qformer_input_ids,
-                    attention_mask=qformer_attention_mask_current_frame,
-                    query_embeds=query_tokens,
-                    encoder_hidden_states=frame_embeds,
-                    encoder_attention_mask=frame_attention_mask,
-                    return_dict=True,
-                )
-                query_output = query_outputs.last_hidden_state[:, : query_tokens.size(1), :]
+        image_embeds = self.vision_model(pixel_values, return_dict=True).last_hidden_state
+        image_attention_mask = torch.ones(image_embeds.size()[:-1], dtype=torch.long, device=image_embeds.device)
 
-                model_inputs_qformer = self.language_projection(query_output)
-                attention_mask_qformer = torch.ones(
-                    model_inputs_qformer.size()[:-1], dtype=torch.long, device=model_inputs_qformer.device
-                )
-                language_model_inputs.append(model_inputs_qformer)
-                language_attention_mask.append(attention_mask_qformer)
-            language_model_inputs = torch.cat(language_model_inputs, dim=1)
-            language_attention_mask = torch.cat(language_attention_mask, dim=1)
-        else:
-            image_embeds = self.vision_model(pixel_values, return_dict=True).last_hidden_state
-            image_attention_mask = torch.ones(image_embeds.size()[:-1], dtype=torch.long, device=image_embeds.device)
+        query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
+        query_attention_mask = torch.ones(query_tokens.size()[:-1], dtype=torch.long, device=image_embeds.device)
+        if qformer_attention_mask is None:
+            qformer_attention_mask = torch.ones_like(qformer_input_ids)
+        if query_attention_mask.shape[0] != batch_size:
+            qformer_input_ids = qformer_input_ids.repeat_interleave(frames, dim=0)
+            qformer_attention_mask = qformer_attention_mask.repeat_interleave(frames, dim=0)
+        qformer_attention_mask = torch.cat([query_attention_mask, qformer_attention_mask], dim=1)
+        query_outputs = self.qformer(
+            input_ids=qformer_input_ids,
+            attention_mask=qformer_attention_mask,
+            query_embeds=query_tokens,
+            encoder_hidden_states=image_embeds,
+            encoder_attention_mask=image_attention_mask,
+            return_dict=True,
+        )
+        query_output = query_outputs.last_hidden_state[:, : query_tokens.size(1), :]
 
-            query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
-            query_attention_mask = torch.ones(query_tokens.size()[:-1], dtype=torch.long, device=image_embeds.device)
-            if qformer_attention_mask is None:
-                qformer_attention_mask = torch.ones_like(qformer_input_ids)
-            qformer_attention_mask = torch.cat([query_attention_mask, qformer_attention_mask], dim=1)
-            query_outputs = self.qformer(
-                input_ids=qformer_input_ids,
-                attention_mask=qformer_attention_mask,
-                query_embeds=query_tokens,
-                encoder_hidden_states=image_embeds,
-                encoder_attention_mask=image_attention_mask,
-                return_dict=True,
+        language_model_inputs = self.language_projection(query_output)
+
+        # if video is passed unbatch the embeddings back, by moving frames to seq-len
+        if language_model_inputs.shape[0] != batch_size:
+            language_model_inputs = language_model_inputs.reshape(
+                batch_size, self.config.num_query_tokens * frames, -1
             )
-            query_output = query_outputs.last_hidden_state[:, : query_tokens.size(1), :]
-
-            language_model_inputs = self.language_projection(query_output)
-            language_attention_mask = torch.ones(
-                language_model_inputs.size()[:-1], dtype=torch.long, device=language_model_inputs.device
-            )
+        language_attention_mask = torch.ones(
+            language_model_inputs.size()[:-1], dtype=torch.long, device=language_model_inputs.device
+        )
 
         if input_ids is None:
             input_ids = (
