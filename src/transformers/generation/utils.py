@@ -1979,7 +1979,7 @@ class GenerationMixin:
             start_layer = 1
         else:
             start_layer = 0
-        
+
         if isinstance(dola_layers, str) and dola_layers == "low":
             if start_layer == mature_layer // 2:
                 candidate_premature_layers = [start_layer]
@@ -2011,7 +2011,7 @@ class GenerationMixin:
         # of the model doesnot have self.lm_head, raise an error
         if not hasattr(self, "lm_head"):
             raise ValueError(f"The model {self.__class__.__name__} does not have an lm_head attribute to use DoLa decoding.")
-        print("DoLa decoding with candidate_premature_layers", candidate_premature_layers)
+
         while True:
             if synced_gpus:
                 # Under synced_gpus the `forward` call must continue until all gpus complete their sequence.

@@ -18,7 +18,7 @@ import copy
 import json
 import os
 import warnings
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 
 from .. import __version__
 from ..configuration_utils import PretrainedConfig
