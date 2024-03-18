@@ -1228,7 +1228,6 @@ class GenerationMixin:
         prefix_allowed_tokens_fn: Optional[Callable[[int, torch.Tensor], List[int]]] = None,
         synced_gpus: Optional[bool] = None,
         assistant_model: Optional["PreTrainedModel"] = None,
-        dola_layers: Union[str, List[int]] = None,
         streamer: Optional["BaseStreamer"] = None,
         negative_prompt_ids: Optional[torch.Tensor] = None,
         negative_prompt_attention_mask: Optional[torch.Tensor] = None,
@@ -1288,13 +1287,6 @@ class GenerationMixin:
                 same tokenizer. The acceleration is achieved when forecasting candidate tokens with the assistent model
                 is much faster than running generation with the model you're calling generate from. As such, the
                 assistant model should be much smaller.
-            dola_layers (`str` or `List[int]`, *optional*):
-                The layers to use for DoLa decoding. If `None`, DoLa decoding is not used. If a string, it must
-                be one of "low" or "high", which means using the lower part or higher part of the model layers, respectively,
-                If a list of integers, it must contain the indices of the layers to use for candidate premature layers in DoLa.
-                The 0-th layer is the word embedding layer of the model. For most of the cases, `dola_layers='low'` is recommended,
-                as described in [DoLa: Decoding by Contrasting Layers Improves Factuality in Large Language
-                Models](https://arxiv.org/abs/2309.03883).
             streamer (`BaseStreamer`, *optional*):
                 Streamer object that will be used to stream the generated sequences. Generated tokens are passed
                 through `streamer.put(token_ids)` and the streamer is responsible for any further processing.
@@ -1454,7 +1446,7 @@ class GenerationMixin:
         self._validate_generated_length(generation_config, input_ids_length, has_default_max_length)
 
         # 7. determine generation mode
-        generation_mode = generation_config.get_generation_mode(assistant_model, dola_layers)
+        generation_mode = generation_config.get_generation_mode(assistant_model)
 
         if streamer is not None and (generation_config.num_beams > 1):
             raise ValueError(
@@ -1527,13 +1519,16 @@ class GenerationMixin:
                 streamer=streamer,
                 **model_kwargs,
             )
-        if generation_mode == GenerationMode.DOLA_GENERATION:
-            generation_config.repetition_penalty = 1.2
-            result = self.dola_decoding(
+        elif generation_mode == GenerationMode.DOLA_GENERATION:
+            if generation_config.repetition_penalty != 1.2:
+                warnings.warn(
+                    f"Calling DoLa decoding but the `repetition_penalty` is set to a value of {generation_config.repetition_penalty}, which could induce unwanted behavior. "
+                    "The recommended value for DoLa decoding is `repetition_penalty=1.2` to prevent repetition."
+                )
+            result = self._dola_decoding(
                 input_ids,
-                dola_layers=dola_layers,
+                dola_layers=generation_config.dola_layers,
                 do_sample=generation_config.do_sample,
-                relative_top=generation_config.relative_top,
                 logits_processor=prepared_logits_processor,
                 logits_warper=self._get_logits_warper(generation_config) if generation_config.do_sample else None,
                 stopping_criteria=prepared_stopping_criteria,
@@ -1803,16 +1798,14 @@ class GenerationMixin:
 
         return result
 
-    def dola_decoding(
+    def _dola_decoding(
         self,
         input_ids: torch.LongTensor,
         dola_layers: Optional[Union[str, List[int]]] = "low",
-        relative_top: float = 0.1,
         do_sample: bool = False,
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         logits_warper: Optional[LogitsProcessorList] = None,
-        max_length: Optional[int] = None,
         pad_token_id: Optional[int] = None,
         eos_token_id: Optional[Union[int, List[int]]] = None,
         output_attentions: Optional[bool] = None,
@@ -1828,14 +1821,6 @@ class GenerationMixin:
         Generates sequences of token ids for models with a language modeling head using **dola decoding** and
         can be used for decoder-only text models.
         The method is based on the paper "DoLa: Decoding by Contrasting Layers Improves Factuality in Large Language Models" (https://arxiv.org/abs/2309.03883) in ICLR 2024.
-
-        <Tip warning={true}>
-
-        In most cases, you do not need to call [`~generation.GenerationMixin.sample`] directly. Use generate() instead.
-        For an overview of generation strategies and code examples, check the [following
-        guide](../generation_strategies).
-
-        </Tip>
 
         Parameters:
             input_ids (`torch.LongTensor` of shape `(batch_size, sequence_length)`):
@@ -1854,9 +1839,6 @@ class GenerationMixin:
                 An instance of [`LogitsProcessorList`]. List of instances of class derived from [`LogitsWarper`] used
                 to warp the prediction score distribution of the language modeling head applied before multinomial
                 sampling at each generation step.
-            max_length (`int`, *optional*, defaults to 20):
-                **DEPRECATED**. Use `logits_processor` or `stopping_criteria` directly to cap the number of generated
-                tokens. The maximum length of the sequence to be generated.
             pad_token_id (`int`, *optional*):
                 The id of the *padding* token.
             eos_token_id (`Union[int, List[int]]`, *optional*):
@@ -1932,7 +1914,7 @@ class GenerationMixin:
         >>> stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=20)])
 
         >>> torch.manual_seed(0)  # doctest: +IGNORE_RESULT
-        >>> outputs = model.dola_decoding(
+        >>> outputs = model._dola_decoding(
         ...     input_ids,
         ...     dola_layers='low',
         ...     logits_processor=logits_processor,
@@ -1946,13 +1928,6 @@ class GenerationMixin:
         # init values
         logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
         stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
-        if max_length is not None:
-            warnings.warn(
-                "`max_length` is deprecated in this function, use"
-                " `stopping_criteria=StoppingCriteriaList([MaxLengthCriteria(max_length=max_length)])` instead.",
-                UserWarning,
-            )
-            stopping_criteria = validate_stopping_criteria(stopping_criteria, max_length)
         logits_warper = logits_warper if logits_warper is not None else LogitsProcessorList()
         pad_token_id = pad_token_id if pad_token_id is not None else self.generation_config.pad_token_id
         eos_token_id = eos_token_id if eos_token_id is not None else self.generation_config.eos_token_id
@@ -1992,22 +1967,51 @@ class GenerationMixin:
 
         this_peer_finished = False  # used by synced_gpus only
         # auto-regressive generation
+        # using final layer as the mature layer
         mature_layer = self.config.num_hidden_layers
+        # if the model has tied word embeddings, we skip the word embeddings (0-th) layer and start from the 2nd layer, as the early exit from word embeddings will become identity function
+        # if the model is really shallow (<=2 layers), we use the 1st layer if it's not the mature layer and the 0-th layer if it's the mature layer. Notice that DoLa is not helping much to shallow models.
+        if not self.config.tie_word_embeddings:
+            start_layer = 0
+        elif mature_layer > 2:
+            start_layer = 2
+        elif mature_layer == 2:
+            start_layer = 1
+        else:
+            start_layer = 0
+        
         if isinstance(dola_layers, str) and dola_layers == "low":
-            candidate_premature_layers = (
-                list(range(0, mature_layer // 2, 2)) if mature_layer <= 40 else list(range(0, 20, 2))
-            )
+            if start_layer == mature_layer // 2:
+                candidate_premature_layers = [start_layer]
+            else:
+                candidate_premature_layers = (
+                    list(range(start_layer, mature_layer // 2, 2)) if mature_layer <= 40 else list(range(start_layer, 20, 2))
+                )
+            if len(candidate_premature_layers) == 0:
+                raise ValueError(
+                    f"The model {self.__class__.__name__} only has {mature_layer} layers, which is not enough to use DoLa decoding with `dola_layers='low'`. "
+                    f"The start layer is {start_layer} and the end layer is {mature_layer // 2}."
+                )
         elif isinstance(dola_layers, str) and dola_layers == "high":
             candidate_premature_layers = (
                 list(range(mature_layer // 2, mature_layer, 2))
                 if mature_layer <= 40
                 else list(range(mature_layer - 20, mature_layer, 2))
             )
+            if len(candidate_premature_layers) == 0:
+                raise ValueError(
+                    f"The model {self.__class__.__name__} only has {mature_layer} layers, which is not enough to use DoLa decoding with `dola_layers='high'`. "
+                    f"The start layer is {mature_layer // 2} and the end layer is {mature_layer}."
+                )
         elif isinstance(dola_layers, list):
             candidate_premature_layers = [i for i in dola_layers if i < mature_layer]
         else:
             raise ValueError("dola_layers must be either 'low', 'high' or a list of integers.")
 
+        # of the model doesnot have self.lm_head, raise an error
+        if not hasattr(self, "lm_head"):
+            raise ValueError(f"The model {self.__class__.__name__} does not have an lm_head attribute to use DoLa decoding.")
+        print("DoLa decoding with candidate_premature_layers", candidate_premature_layers)
         while True:
             if synced_gpus:
                 # Under synced_gpus the `forward` call must continue until all gpus complete their sequence.
@@ -2030,6 +2034,7 @@ class GenerationMixin:
                 output_hidden_states=True,
             )
 
+            final_layer_next_token_logits = outputs.logits[:, -1, :].detach().clone()
             final_logits = outputs.logits[:, -1, :]
             candidate_premature_logits = {}
             for candidate_premature_layer in candidate_premature_layers:
@@ -2041,12 +2046,7 @@ class GenerationMixin:
                 continue  # don't waste resources running the code we don't need
             if len(candidate_premature_layers) == 1:
                 base_logits = candidate_premature_logits[candidate_premature_layers[0]]
-                if relative_top > 0.0:
-                    final_logits = relative_top_filter(final_logits, relative_top)
-                    base_logits = base_logits.log_softmax(dim=-1)
-                    mask = final_logits[0] < -1e3
-                    base_logits[0][mask] = -1e3
-
+                final_logits, base_logits = _relative_top_filter(final_logits, base_logits)
                 logits = final_logits - base_logits
                 next_token_logits = logits
             else:
@@ -2086,24 +2086,19 @@ class GenerationMixin:
                 premature_layer = candidate_premature_layers[int(js_divs.argmax().cpu().item())]
 
                 base_logits = candidate_premature_logits[premature_layer]
-                if relative_top > 0.0:
-                    final_logits = relative_top_filter(final_logits, relative_top)
-                    base_logits = base_logits.log_softmax(dim=-1)
-                    mask = final_logits[0] < -1e3
-                    base_logits[0][mask] = -1e3
+                final_logits, base_logits = _relative_top_filter(final_logits, base_logits)
                 logits = final_logits - base_logits
                 next_token_logits = logits
             # pre-process distribution
             next_token_scores = logits_processor(input_ids, next_token_logits)
             if do_sample:  # sample
                 next_token_scores = logits_warper(input_ids, next_token_scores)
-
             # Store scores, attentions and hidden_states when required
             if return_dict_in_generate:
                 if output_scores:
                     scores += (next_token_scores,)
                 if output_logits:
-                    raw_logits += (next_token_logits,)
+                    raw_logits += (final_layer_next_token_logits,)
                 if output_attentions:
                     decoder_attentions += (
                         (outputs.decoder_attentions,) if self.config.is_encoder_decoder else (outputs.attentions,)
@@ -5378,19 +5373,23 @@ def stack_model_outputs(model_outputs: List[ModelOutput]) -> ModelOutput:
     return model_output_cls(**concatenated_data)
 
 
-def relative_top_filter(
+def _relative_top_filter(
     scores: torch.FloatTensor,
+    baseline_scores: torch.FloatTensor,
     relative_top: float = 0.1,
     filter_value: float = -float("Inf"),
+    base_filter_value = -1e-3,
     min_tokens_to_keep: int = 1,
 ) -> torch.FloatTensor:
     """Reference: https://github.com/XiangLi1999/ContrastiveDecoding/blob/170e9142e92159c1237d731e240f5eb14aabf428/transformers/src/transformers/generation_logits_process.py#L235"""
     scores_normalized = scores.log_softmax(dim=-1)
+    baseline_scores_normalized = baseline_scores.log_softmax(dim=-1)
     sorted_logits, sorted_indices = torch.sort(scores_normalized, descending=True)
     min_thresh = sorted_logits[..., min_tokens_to_keep - 1]
     probs_max = torch.max(scores_normalized, dim=-1).values
     probs_thresh = probs_max + np.log(relative_top)
     probs_thresh = torch.min(min_thresh, probs_thresh)
     probs_thresh = probs_thresh.unsqueeze(-1)
+    baseline_scores_normalized[scores_normalized < probs_thresh] = base_filter_value
     scores_normalized[scores_normalized < probs_thresh] = filter_value
-    return scores_normalized
+    return scores_normalized, baseline_scores_normalized
