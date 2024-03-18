@@ -12,8 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch Mixtral model. """
-
+"""Testing suite for the PyTorch Mixtral model."""
 
 import tempfile
 import unittest
@@ -534,12 +533,54 @@ class MixtralModelTest(ModelTesterMixin, GenerationTesterMixin, PipelineTesterMi
                     max_new_tokens=max_new_tokens,
                     do_sample=False,
                     use_cache=True,
-                    dola_layers='low',
+                    dola_layers="low",
                     repetition_penalty=1.2,
                 )
                 text = dola_output[0].tolist()
             # check that the output is matching the expected output
-            EXPECTED_OUTPUT = [94, 47, 92, 32, 11, 62, 94, 89, 37, 63, 37, 63, 30, 71, 15, 66, 17, 68, 80, 70, 39, 76, 80, 13, 85, 20, 89, 33, 87, 88, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            EXPECTED_OUTPUT = [
+                94,
+                47,
+                92,
+                32,
+                11,
+                62,
+                94,
+                89,
+                37,
+                63,
+                37,
+                63,
+                30,
+                71,
+                15,
+                66,
+                17,
+                68,
+                80,
+                70,
+                39,
+                76,
+                80,
+                13,
+                85,
+                20,
+                89,
+                33,
+                87,
+                88,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ]
             self.assertListEqual(text, EXPECTED_OUTPUT)
 
 

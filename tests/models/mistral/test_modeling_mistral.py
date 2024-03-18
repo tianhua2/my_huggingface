@@ -12,8 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch Mistral model. """
-
+"""Testing suite for the PyTorch Mistral model."""
 
 import gc
 import tempfile
@@ -502,14 +501,18 @@ class MistralIntegrationTest(unittest.TestCase):
 
     @slow
     def test_model_7b_dola_generation(self):
-        EXPECTED_TEXT_COMPLETION = """My favourite condiment is 100% ketchup. I love it on everything, and I’m not ash"""
+        EXPECTED_TEXT_COMPLETION = (
+            """My favourite condiment is 100% ketchup. I love it on everything, and I’m not ash"""
+        )
         prompt = "My favourite condiment is "
         tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-v0.1", use_fast=False)
         model = MistralForCausalLM.from_pretrained("mistralai/Mistral-7B-v0.1", device_map="auto")
         input_ids = tokenizer.encode(prompt, return_tensors="pt").to(model.model.embed_tokens.weight.device)
 
         # greedy generation outputs
-        generated_ids = model.generate(input_ids, max_new_tokens=20, temperature=0, dola_layers='low', repetition_penalty=1.2)
+        generated_ids = model.generate(
+            input_ids, max_new_tokens=20, temperature=0, dola_layers="low", repetition_penalty=1.2
+        )
         text = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
         print("Answer here: ", text)
         self.assertEqual(EXPECTED_TEXT_COMPLETION, text)

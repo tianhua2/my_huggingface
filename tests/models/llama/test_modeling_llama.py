@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Testing suite for the PyTorch LLaMA model. """
+"""Testing suite for the PyTorch LLaMA model."""
 
 import tempfile
 import unittest
@@ -617,7 +617,9 @@ class LlamaIntegrationTest(unittest.TestCase):
             model = model.to("cuda")
 
         # greedy generation outputs
-        generated_ids = model.generate(input_ids, max_new_tokens=64, top_p=None, temperature=1, do_sample=False, dola_layers='low')
+        generated_ids = model.generate(
+            input_ids, max_new_tokens=64, top_p=None, temperature=1, do_sample=False, dola_layers="low"
+        )
         text = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
         print("Answer here: ", text)
         self.assertEqual(EXPECTED_TEXT_COMPLETION, text)
