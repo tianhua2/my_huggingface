@@ -18,8 +18,8 @@ from ..utils import OptionalDependencyNotAvailable, _LazyModule, is_flax_availab
 
 
 _import_structure = {
-    "configuration_utils": ["GenerationConfig", "GenerationMode"],
-    "streamers": ["TextIteratorStreamer", "TextStreamer"],
+    "configuration_utils": ["GenerationConfig"],
+    "streamers": ["TextIteratorStreamer", "TextStreamer", "OutputIteratorStreamer"],
 }
 
 try:

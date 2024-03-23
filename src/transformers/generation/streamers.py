@@ -16,6 +16,9 @@
 from queue import Queue
 from typing import TYPE_CHECKING, Optional
 
+import torch
+
+from transformers.generation.utils import (GenerateDecoderOnlyOutput, GenerateEncoderDecoderOutput)
 
 if TYPE_CHECKING:
     from ..models.auto import AutoTokenizer
@@ -35,7 +38,126 @@ class BaseStreamer:
         raise NotImplementedError()
 
 
-class TextStreamer(BaseStreamer):
+class OutputStreamer(BaseStreamer):
+    """
+    Streams Output objects
+    """
+    def __init__(self,
+                 filter_func=None,
+                 cache = None,
+    ):
+        if filter_func is None:
+            filter_func = self._filter_func
+        self.filter_func = filter_func
+        if cache is None:
+            cache = []
+        self.cache = cache # incoming unprocessed outputs
+
+    def _filter_func(self, value):
+        """
+        Class-default behavior for self.filter_func.
+
+        self.filter_func will be called on each incoming value. Can be used to filter the stream to a particular
+        attribute on the value object, or to limit the stream to values meeting certain criteria.
+        """
+        return value
+
+    def process_incoming_value(self, value):
+        """
+        Called on each incoming value
+        """
+        return self.filter_func(value)
+
+    def is_ready(self):
+        """
+        Test whether the buffer is ready
+        """
+        return len(self.cache) > 1
+
+    def on_ready(self):
+        """
+        When the buffer is ready, flush it and do something with the values it was holding
+        """
+        if len(self.cache) > 1:
+            values = self.cache[:]
+        elif len(self.cache) == 1:
+            values = self.cache[0]
+            values = [values] # put it in a list to be consistent
+        else:
+            raise ValueError("on_ready() called on an empty buffer. This should not happen. Report this error.")
+        self.cache = []
+        return self.process_outgoing_values(values)
+
+    def process_outgoing_values(self, values):
+        """
+        What to do with the values that were previously in the buffer
+        """
+        return values
+
+    def put(self, value):
+        value = self.process_incoming_value(value)
+        if value is not None:
+            if isinstance(value, list):
+                self.cache.extend(value)
+            else:
+                self.cache.append(value)
+
+        if self.is_ready():
+            return self.on_ready()
+
+
+class OutputIteratorStreamer(OutputStreamer):
+    def __init__(self,
+                 filter_func=None,
+                 cache = None,
+                 queue=None,
+                 timeout: Optional[float] = None,
+    ):
+        super().__init__(filter_func=filter_func, cache=cache)
+        if queue is None:
+           queue = Queue()
+        self.queue = queue # outgoing finalized outputs
+        self.timeout = timeout
+        self.stop_signal = None
+
+    def process_outgoing_values(self, values):
+        """
+        What to do with the values that were previously in the buffer
+        """
+        self.queue.put(values)
+
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        value = self.queue.get(timeout=self.timeout)
+        if value == self.stop_signal:
+            raise StopIteration()
+        else:
+            return value
+
+    def end(self):
+        # flush the cache if there's anything in it
+        if self.cache:
+            self.on_ready()
+        self.queue.put(self.stop_signal)
+
+
+###############################
+
+class TokenStreamer(OutputStreamer):
+    """
+    Filters the output stream on tokens to replicate legacy behavior
+    """
+    def _filter_func(self, value):
+        if isinstance(value, (GenerateDecoderOnlyOutput, GenerateEncoderDecoderOutput)):
+            return value.sequences.cpu()
+        else:
+            return value.cpu()
+
+
+class TextStreamer(TokenStreamer):
     """
     Simple text streamer that prints the token(s) to stdout as soon as entire words are formed.
 
@@ -70,6 +192,7 @@ class TextStreamer(BaseStreamer):
     """
 
     def __init__(self, tokenizer: "AutoTokenizer", skip_prompt: bool = False, **decode_kwargs):
+        super().__init__()
         self.tokenizer = tokenizer
         self.skip_prompt = skip_prompt
         self.decode_kwargs = decode_kwargs
@@ -83,6 +206,15 @@ class TextStreamer(BaseStreamer):
         """
         Receives tokens, decodes them, and prints them to stdout as soon as they form entire words.
         """
+        # uses the parent classes built-in cache to restrict the "value" object to token_ids
+        value = self.filter_func(value)
+        if value is None:
+            return
+
+        #TODO: probably don't need this anymore?
+        if isinstance(value, list):
+            value = torch.tensor(value)
+
         if len(value.shape) > 1 and value.shape[0] > 1:
             raise ValueError("TextStreamer only supports batch size 1")
         elif len(value.shape) > 1:
