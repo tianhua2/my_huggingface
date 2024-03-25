@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
+from quanto import QBitsTensor, qint4, qint8
 
 from .configuration_utils import PretrainedConfig
 from .utils import logging
@@ -153,6 +154,138 @@ class DynamicCache(Cache):
         if len(self.key_cache) <= layer_idx:
             return 0
         return self.key_cache[layer_idx].shape[-2]
+
+    def get_max_length(self) -> Optional[int]:
+        """Returns the maximum sequence length of the cached states. DynamicCache does not have a maximum length."""
+        return None
+
+    def reorder_cache(self, beam_idx: torch.LongTensor):
+        """Reorders the cache for beam search, given the selected beam indices."""
+        for layer_idx in range(len(self.key_cache)):
+            device = self.key_cache[layer_idx].device
+            self.key_cache[layer_idx] = self.key_cache[layer_idx].index_select(0, beam_idx.to(device))
+            device = self.value_cache[layer_idx].device
+            self.value_cache[layer_idx] = self.value_cache[layer_idx].index_select(0, beam_idx.to(device))
+
+    def to_legacy_cache(self) -> Tuple[Tuple[torch.Tensor], Tuple[torch.Tensor]]:
+        """Converts the `DynamicCache` instance into the its equivalent in the legacy cache format."""
+        legacy_cache = ()
+        for layer_idx in range(len(self)):
+            legacy_cache += ((self.key_cache[layer_idx], self.value_cache[layer_idx]),)
+        return legacy_cache
+
+    @classmethod
+    def from_legacy_cache(cls, past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None) -> "DynamicCache":
+        """Converts a cache in the legacy cache format into an equivalent `DynamicCache`."""
+        cache = cls()
+        if past_key_values is not None:
+            for layer_idx in range(len(past_key_values)):
+                key_states, value_states = past_key_values[layer_idx]
+                cache.update(key_states, value_states, layer_idx)
+        return cache
+
+
+def quantize(tensor, n_bits, q_group_size):
+    qtype = qint4 if n_bits==4 else qint8
+    qtensor = QBitsTensor.quantize(tensor, axis=0, qtype=qtype, group_size=q_group_size)
+
+    #tensor = tensor.reshape(-1, q_group_size)
+    #max_val = tensor.amax(dim=1)
+    #min_val = tensor.amin(dim=1)
+    #max_int = 2**n_bits - 1
+    #min_int = -(2**n_bits - 1)
+    #scales = (max_val - min_val).clamp(min=1e-5) / max_int
+    #zeros = (-torch.round(min_val / scales)).clamp_(min_int, max_int)
+    #qtensor = torch.quantize_per_channel(
+    #    tensor.to(torch.float32), scales=scales, zero_points=zeros, axis=0, dtype=torch.quint8
+    #)
+    return qtensor
+
+
+class QuantCache(Cache):
+    def __init__(self) -> None:
+        self.key_cache: List[torch.Tensor] = []
+        self.value_cache: List[torch.Tensor] = []
+        self._key_cache_quant: List[torch.Tensor] = []
+        self._value_cache_quant: List[torch.Tensor] = []
+        self.seen_token = 0
+
+    def __getitem__(self, layer_idx: int) -> List[Tuple[torch.Tensor]]:
+        """
+        Support for backwards-compatible `past_key_value` indexing, e.g. `past_key_value[0][0].shape[2]` to get the
+        sequence length.
+        """
+        if layer_idx < len(self):
+            return (self.key_cache[layer_idx], self.value_cache[layer_idx])
+        else:
+            raise KeyError(f"Cache only has {len(self)} layers, attempted to access layer with index {layer_idx}")
+
+    def __iter__(self):
+        """
+        Support for backwards-compatible `past_key_value` iteration, e.g. `for x in past_key_value:` to iterate over
+        keys and values
+        """
+        for layer_idx in range(len(self)):
+            yield (self.key_cache[layer_idx], self.value_cache[layer_idx])
+
+    def __len__(self):
+        """
+        Support for backwards-compatible `past_key_value` length, e.g. `len(past_key_value)`. This value corresponds
+        to the number of layers in the model.
+        """
+        return len(self.key_cache)
+
+    def update(
+        self,
+        key_states: torch.Tensor,
+        value_states: torch.Tensor,
+        layer_idx: int,
+        cache_kwargs: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # Update the number of seen tokens
+        if layer_idx == 0:
+            self.seen_token += key_states.shape[-2]
+
+        # Update the cache
+        if len(self.key_cache) <= layer_idx:
+            self._key_cache_quant.append(quantize(key_states.contiguous(), n_bits=4, q_group_size=32))
+            self._value_cache_quant.append(quantize(value_states.contiguous(), n_bits=4, q_group_size=32))
+            self.key_cache.append(torch.zeros(0, dtype=key_states.dtype, device=key_states.device))
+            self.value_cache.append(torch.zeros(0, dtype=key_states.dtype, device=key_states.device))
+            keys_to_return, values_to_return = key_states, value_states
+        else:
+            keys_to_return = torch.cat(
+                    [
+                        self._key_cache_quant[layer_idx],
+                        self.key_cache[layer_idx],
+                        key_states,
+                    ],
+                    dim=-2,
+                )
+            values_to_return = torch.cat(
+                    [
+                        self._value_cache_quant[layer_idx],
+                        self.value_cache[layer_idx],
+                        value_states,
+                    ],
+                    dim=-2,
+                )
+            if self.key_cache[layer_idx].dim() == 4 and self.key_cache[layer_idx].shape[-2] + 1 == 64:            
+                self._key_cache_quant[layer_idx] = quantize(keys_to_return.contiguous(), n_bits=4, q_group_size=32)
+                self._value_cache_quant[layer_idx] = quantize(values_to_return.contiguous(), n_bits=4, q_group_size=32)
+                self.key_cache[layer_idx] = torch.zeros(0, dtype=key_states.dtype, device=key_states.device)
+                self.value_cache[layer_idx] = torch.zeros(0, dtype=key_states.dtype, device=key_states.device)
+            else:
+                self.key_cache[layer_idx] = torch.cat([self.key_cache[layer_idx], key_states], dim=-2)
+                self.value_cache[layer_idx] = torch.cat([self.value_cache[layer_idx], value_states], dim=-2)
+
+        return keys_to_return, values_to_return
+
+    def get_seq_length(self, layer_idx: Optional[int] = 0) -> int:
+        """Returns the sequence length of the cached states. A layer index can be optionally passed."""
+        if len(self.key_cache) <= layer_idx:
+            return 0
+        return self.seen_token
 
     def get_max_length(self) -> Optional[int]:
         """Returns the maximum sequence length of the cached states. DynamicCache does not have a maximum length."""
