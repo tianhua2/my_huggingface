@@ -8147,6 +8147,30 @@ class Starcoder2PreTrainedModel(metaclass=DummyObject):
         requires_backends(self, ["torch"])
 
 
+SUPERGLUE_PRETRAINED_MODEL_ARCHIVE_LIST = None
+
+
+class SuperGlueForImageMatching(metaclass=DummyObject):
+    _backends = ["torch"]
+
+    def __init__(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+
+class SuperGlueModel(metaclass=DummyObject):
+    _backends = ["torch"]
+
+    def __init__(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+
+class SuperModelPreTrainedModel(metaclass=DummyObject):
+    _backends = ["torch"]
+
+    def __init__(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+
 SUPERPOINT_PRETRAINED_MODEL_ARCHIVE_LIST = None
 
 
