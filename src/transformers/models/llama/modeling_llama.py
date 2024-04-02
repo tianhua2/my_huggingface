@@ -975,7 +975,7 @@ class LlamaModel(LlamaPreTrainedModel):
         if use_cache:  # kept for BC (cache positions)
             if past_key_values is None:
                 # QuantCache, DynamicCache
-                past_key_values = DynamicCache()
+                past_key_values = QuantCache()
             past_seen_tokens = past_key_values.get_seq_length()    
 
         if cache_position is None:

@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import copy
+from time import perf_counter
 import inspect
 import warnings
 from dataclasses import dataclass
@@ -2399,7 +2400,9 @@ class GenerationMixin:
             cur_len = model_kwargs["inputs_embeds"].shape[1]
         this_peer_finished = False
         unfinished_sequences = torch.ones(batch_size, dtype=torch.long, device=input_ids.device)
-        model_kwargs["cache_position"] = torch.arange(cur_len, device=input_ids.device)
+        #model_kwargs["cache_position"] = torch.arange(cur_len, device=input_ids.device)
+        ttft = None
+        start = perf_counter()
 
         while self._has_unfinished_sequences(this_peer_finished, synced_gpus, device=input_ids.device):
             # prepare model inputs
@@ -2468,6 +2471,8 @@ class GenerationMixin:
 
             unfinished_sequences = unfinished_sequences & ~stopping_criteria(input_ids, scores)
             this_peer_finished = unfinished_sequences.max() == 0
+            if ttft is None:
+                ttft = perf_counter() - start
 
         if streamer is not None:
             streamer.end()
@@ -2495,7 +2500,7 @@ class GenerationMixin:
                     past_key_values=model_kwargs.get("past_key_values"),
                 )
         else:
-            return input_ids
+            return input_ids, ttft
 
     def sample(self, *args, **kwargs):
         logger.warning_once(
