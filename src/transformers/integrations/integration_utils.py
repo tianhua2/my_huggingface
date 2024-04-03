@@ -733,7 +733,7 @@ class WandbCallback(TrainerCallback):
             combined_dict = {**args.to_dict()}
 
             if hasattr(model, "config") and model.config is not None:
-                model_config = model.config.to_dict()
+                model_config = model.config if isinstance(model.config, dict) else model.config.to_dict()
                 combined_dict = {**model_config, **combined_dict}
             trial_name = state.trial_name
             init_args = {}
