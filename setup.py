@@ -160,6 +160,7 @@ _deps = [
     "sacremoses",
     "safetensors>=0.4.1",
     "sagemaker>=2.31.0",
+    "schedulefree==1.2.1",
     "scikit-learn",
     "sentencepiece>=0.1.91,!=0.1.92",
     "sigopt",
