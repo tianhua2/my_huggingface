@@ -498,10 +498,11 @@ def load_sharded_checkpoint(model, folder, strict=True, prefer_safe=True):
     return torch.nn.modules.module._IncompatibleKeys(missing_keys, unexpected_keys)
 
 
-def load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool = False):
+def load_state_dict(checkpoint_file: Union[str, os.PathLike], hf_quantizer=None):
     """
     Reads a PyTorch checkpoint file, returning properly formatted errors if they arise.
     """
+    is_quantized = hf_quantizer is not None
     if checkpoint_file.endswith(".safetensors") and is_safetensors_available():
         # Check format of the archive
         with safe_open(checkpoint_file, framework="pt") as f:
@@ -511,7 +512,11 @@ def load_state_dict(checkpoint_file: Union[str, os.PathLike], is_quantized: bool
                 f"The safetensors archive passed at {checkpoint_file} does not contain the valid metadata. Make sure "
                 "you save your model with the `save_pretrained` method."
             )
-        return safe_load_file(checkpoint_file)
+        state_dict = safe_load_file(checkpoint_file)
+        if hf_quantizer is not None:
+            del metadata["format"]
+            hf_quantizer.update_state_dict_with_metadata(state_dict, metadata)
+        return state_dict
     try:
         if (
             (is_deepspeed_zero3_enabled() and torch.distributed.is_initialized() and torch.distributed.get_rank() > 0)
@@ -809,7 +814,11 @@ def _load_state_dict_into_meta_model(
 
     for param_name, param in state_dict.items():
         # First part of the test is always true as load_state_dict_keys always contains state_dict keys.
-        if param_name not in loaded_state_dict_keys or param_name not in expected_keys:
+        if (
+            param_name not in loaded_state_dict_keys
+            or param_name not in expected_keys
+            or not isinstance(param, torch.Tensor)
+        ):
             continue
 
         if param_name.startswith(start_prefix):
@@ -895,7 +904,6 @@ def _load_state_dict_into_meta_model(
                 value = type(value)(value.data.to("cpu"), **value.__dict__)
                 setattr(module, tensor_name, value)
             # TODO: consider removing used param_parts from state_dict before return
-
     return error_msgs, offload_index, state_dict_index
 
 
@@ -2481,6 +2489,12 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
             for ignore_key in self._keys_to_ignore_on_save:
                 if ignore_key in state_dict.keys():
                     del state_dict[ignore_key]
+
+        # separate state_dict into state_dict and metadata
+        metadata = {}
+        if hf_quantizer is not None:
+            state_dict, metadata = hf_quantizer.split_state_dict(state_dict)
+
         if safe_serialization:
             # Safetensors does not allow tensor aliasing.
             # We're going to remove aliases before saving
@@ -2575,8 +2589,10 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
             if safe_serialization:
                 # At some point we will need to deal better with save_function (used for TPU and other distributed
                 # joyfulness), but for now this enough.
-                safe_save_file(shard, os.path.join(save_directory, shard_file), metadata={"format": "pt"})
+                metadata.update({"format": "pt"})
+                safe_save_file(shard, os.path.join(save_directory, shard_file), metadata=metadata)
             else:
+                shard.update(metadata)
                 save_function(shard, os.path.join(save_directory, shard_file))
 
         if index is None:
@@ -4075,7 +4091,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
                 # Skip the load for shards that only contain disk-offloaded weights when using safetensors for the offload.
                 if shard_file in disk_only_shard_files:
                     continue
-                state_dict = load_state_dict(shard_file, is_quantized=is_quantized)
+                state_dict = load_state_dict(shard_file, hf_quantizer=hf_quantizer)
 
                 # Mistmatched keys contains tuples key/shape1/shape2 of weights in the checkpoint that have a shape not
                 # matching the weights in the model.

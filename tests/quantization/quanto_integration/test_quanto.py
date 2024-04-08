@@ -213,27 +213,22 @@ class QuantoQuantizationTest(unittest.TestCase):
         Test the serialization, the loading and the inference of the quantized weights
         """
         with tempfile.TemporaryDirectory() as tmpdirname:
-            with self.assertRaises(ValueError) as e:
-                self.quantized_model.save_pretrained(tmpdirname, safe_serialization=False)
-            self.assertIn("The model is quantized with quanto and is not serializable", str(e.exception))
-            # TODO: replace by the following when it works
-            # quantized_model_from_saved = AutoModelForCausalLM.from_pretrained(
-            #     tmpdirname, torch_dtype=torch.float32, device_map="cpu"
-            # )
-            # self.check_inference_correctness(quantized_model_from_saved, device="cuda")
+            self.quantized_model.save_pretrained(tmpdirname, safe_serialization=False)
+            quantized_model_from_saved = AutoModelForCausalLM.from_pretrained(
+                tmpdirname, torch_dtype=torch.float32, device_map="cpu"
+            )
+            self.check_inference_correctness(quantized_model_from_saved, device="cuda")
 
     def test_serialization_safetensors(self):
         """
         Test the serialization, the loading and the inference of the quantized weights
         """
         with tempfile.TemporaryDirectory() as tmpdirname:
-            with self.assertRaises(ValueError) as e:
-                self.quantized_model.save_pretrained(tmpdirname)
-            self.assertIn("The model is quantized with quanto and is not serializable", str(e.exception))
-            # quantized_model_from_saved = AutoModelForCausalLM.from_pretrained(
-            #     tmpdirname, torch_dtype=torch.float32, device_map="cpu"
-            # )
-            # self.check_inference_correctness(quantized_model_from_saved, device="cuda")
+            self.quantized_model.save_pretrained(tmpdirname)
+            quantized_model_from_saved = AutoModelForCausalLM.from_pretrained(
+                tmpdirname, torch_dtype=torch.float32, device_map="cpu"
+            )
+            self.check_inference_correctness(quantized_model_from_saved, device="cuda")
 
     def check_same_model(self, model1, model2):
         d0 = dict(model1.named_parameters())
@@ -261,9 +256,8 @@ class QuantoQuantizationTest(unittest.TestCase):
         self.check_same_model(model, self.quantized_model)
         self.check_inference_correctness(model, device="cuda")
 
-    @unittest.skip
     def test_load_from_quanto_saved(self):
-        from quanto import freeze, qint4, qint8, quantize
+        from quanto import freeze, qint4, qint8, quantize, safe_save
 
         from transformers import QuantoConfig
 
@@ -281,7 +275,8 @@ class QuantoQuantizationTest(unittest.TestCase):
             model.config.quantization_config = QuantoConfig(
                 weights=self.weights, activations=self.activations, modules_to_not_convert=["lm_head"]
             )
-            model.save_pretrained(tmpdirname, safe_serialization=False)
+            safe_save(model.state_dict(), tmpdirname + "/model.safetensors", discard_names=model._tied_weights_keys)
+            model.config.save_pretrained(tmpdirname)
             quantized_model_from_saved = AutoModelForCausalLM.from_pretrained(
                 tmpdirname,
                 device_map=self.device_map,
@@ -361,7 +356,6 @@ class QuantoQuantizationOffloadTest(QuantoQuantizationTest):
             )
 
 
-@unittest.skip("Skipping test class because serialization is not supported yet")
 class QuantoQuantizationSerializationTest(QuantoQuantizationTest):
     """
     Perform the same tests as in QuantoQuantizationTest but with a serialized model.
@@ -394,7 +388,6 @@ class QuantoQuantizationSerializationTest(QuantoQuantizationTest):
         )
 
 
-@unittest.skip("Skipping test class because serialization is not supported yet")
 class QuantoQuantizationSerializationCudaTest(QuantoQuantizationTest):
     """
     Perform the same tests as in QuantoQuantizationTest but with model on cuda
@@ -404,18 +397,17 @@ class QuantoQuantizationSerializationCudaTest(QuantoQuantizationTest):
 
 
 class QuantoQuantizationQBitsTensorTest(QuantoQuantizationTest):
-    EXPECTED_OUTPUTS = "Hello my name is John, I am a young man from the Philippines"
+    EXPECTED_OUTPUTS = "Hello my name is Nellie, I am a very sweet and"
     weights = "int4"
 
 
 class QuantoQuantizationQBitsTensorOffloadTest(QuantoQuantizationOffloadTest):
-    EXPECTED_OUTPUTS = "Hello my name is John, I am a young man from the Philippines"
+    EXPECTED_OUTPUTS = "Hello my name is Nellie, I am a very sweet and"
     weights = "int4"
 
 
-@unittest.skip("Skipping test class because serialization is not supported yet")
 class QuantoQuantizationQBitsTensorSerializationTest(QuantoQuantizationSerializationTest):
-    EXPECTED_OUTPUTS = "Hello my name is John, I am a young man from the Philippines"
+    EXPECTED_OUTPUTS = "Hello my name is Nellie, I am a very sweet and"
     weights = "int4"
 
 

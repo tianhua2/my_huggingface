@@ -165,6 +165,9 @@ class HfQuantizer(ABC):
         """
         return
 
+    def update_state_dict_with_metadata(self, state_dict, metadata):
+        return state_dict
+
     def preprocess_model(self, model: "PreTrainedModel", **kwargs):
         """
         Setting model attributes and/or converting model before weights loading. At this point
@@ -193,6 +196,9 @@ class HfQuantizer(ABC):
                 The keyword arguments that are passed along `_process_model_after_weight_loading`.
         """
         return self._process_model_after_weight_loading(model, **kwargs)
+
+    def split_state_dict(self, state_dict):
+        return state_dict, {}
 
     @abstractmethod
     def _process_model_before_weight_loading(self, model, **kwargs):
