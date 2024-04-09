@@ -105,7 +105,6 @@ class MambaMixer(nn.Module):
 
     def __init__(self, config: MambaConfig, layer_idx: int):
         super().__init__()
-        self.usemambapy = config.usemambapy
         self.hidden_size = config.hidden_size
         self.ssm_state_size = config.state_size
         self.conv_kernel_size = config.conv_kernel
@@ -145,7 +144,7 @@ class MambaMixer(nn.Module):
         if not is_fast_path_available:
             logger.warning_once(
                 "The fast path is not available because on of `(selective_state_update, selective_scan_fn, causal_conv1d_fn, causal_conv1d_update, mamba_inner_fn)`"
-                " is None. Falling back to the naive implementation. To install follow https://github.com/state-spaces/mamba/#installation and"
+                " is None. Falling back to the mamba.py implementation for training. To install follow https://github.com/state-spaces/mamba/#installation and"
                 " https://github.com/Dao-AILab/causal-conv1d"
             )
 
@@ -288,16 +287,12 @@ class MambaMixer(nn.Module):
         deltaB_u = discrete_B * hidden_states[:, :, :, None].float()
 
         # 3.c perform the recurrence y ← SSM(A, B, C)(x)
-        if self.usemambapy:
+        if self.training and cache_params is None:
             hs = pscan(discrete_A, deltaB_u) # [batch, intermediate_size, seq_len, ssm_state_size]
 
             scan_output = (hs.transpose(1, 2) @ C.unsqueeze(-1)).squeeze(3).transpose(1, 2) # [batch, intermediate_size, seq_len]
             scan_output = scan_output + hidden_states * self.D[None, :, None]
             scan_output = scan_output * self.act(gate)
-
-            # pas sur, todo
-            ssm_state = hs[:, -1]
-
         else:
             scan_outputs = []
             for i in range(seq_len):
@@ -308,8 +303,8 @@ class MambaMixer(nn.Module):
             scan_output = scan_output + (hidden_states * self.D[None, :, None])
             scan_output = (scan_output * self.act(gate))
 
-        if cache_params is not None:
-            cache_params.ssm_states[self.layer_idx].copy_(ssm_state)
+            if cache_params is not None:
+                cache_params.ssm_states[self.layer_idx].copy_(ssm_state)
 
         # 4. Final linear projection
         contextualized_states = self.out_proj(scan_output.transpose(1, 2))             # [batch, seq_len, hidden_size]
