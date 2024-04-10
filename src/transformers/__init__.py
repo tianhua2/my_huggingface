@@ -3400,7 +3400,6 @@ else:
         [
             "SUPERGLUE_PRETRAINED_MODEL_ARCHIVE_LIST",
             "SuperGlueForImageMatching",
-            "SuperGlueModel",
             "SuperGluePreTrainedModel",
         ]
     )
@@ -7965,7 +7964,6 @@ if TYPE_CHECKING:
         from .models.superglue import (
             SUPERGLUE_PRETRAINED_MODEL_ARCHIVE_LIST,
             SuperGlueForImageMatching,
-            SuperGlueModel,
             SuperGluePreTrainedModel,
         )
         from .models.superpoint import (
