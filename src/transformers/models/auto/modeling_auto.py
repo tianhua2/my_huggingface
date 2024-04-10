@@ -1244,11 +1244,7 @@ MODEL_FOR_KEYPOINT_DETECTION_MAPPING_NAMES = OrderedDict(
     ]
 )
 
-MODEL_FOR_IMAGE_MATCHING_MAPPING_NAMES = OrderedDict(
-    [
-        ("superglue", "SuperGlueForImageMatching")
-    ]
-)
+MODEL_FOR_IMAGE_MATCHING_MAPPING_NAMES = OrderedDict([("superglue", "SuperGlueForImageMatching")])
 
 
 MODEL_FOR_TEXT_ENCODING_MAPPING_NAMES = OrderedDict(
