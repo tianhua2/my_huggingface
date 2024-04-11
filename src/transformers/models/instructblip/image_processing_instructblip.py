@@ -61,39 +61,40 @@ def make_batched(videos) -> List[List[ImageInput]]:
     raise ValueError(f"Could not make batched video from {videos}")
 
 
+# Copied from transformers.models.blip.image_processing_blip.BlipImageProcessor with Blip->InstructBlip, BLIP->InstructBLIP
 class InstructBlipImageProcessor(BaseImageProcessor):
     r"""
-    Constructs an InstructBLIP image processor.
+    Constructs a InstructBLIP image processor.
 
     Args:
         do_resize (`bool`, *optional*, defaults to `True`):
-            Whether to resize the image/video's (height, width) dimensions to the specified `size`. Can be overridden by the
+            Whether to resize the image's (height, width) dimensions to the specified `size`. Can be overridden by the
             `do_resize` parameter in the `preprocess` method.
         size (`dict`, *optional*, defaults to `{"height": 384, "width": 384}`):
             Size of the output image after resizing. Can be overridden by the `size` parameter in the `preprocess`
             method.
         resample (`PILImageResampling`, *optional*, defaults to `Resampling.BICUBIC`):
-            Resampling filter to use if resizing the image. Only has an effect in images and if `do_resize` is set to `True`.
-            Can be overridden by the `resample` parameter in the `preprocess` method.
+            Resampling filter to use if resizing the image. Only has an effect if `do_resize` is set to `True`. Can be
+            overridden by the `resample` parameter in the `preprocess` method.
         do_rescale (`bool`, *optional*, defaults to `True`):
-            Whether to rescale the image/video by the specified scale `rescale_factor`. Can be overridden by the
+            Whether to rescale the image by the specified scale `rescale_factor`. Can be overridden by the
             `do_rescale` parameter in the `preprocess` method.
         rescale_factor (`int` or `float`, *optional*, defaults to `1/255`):
-            Scale factor to use if rescaling the image/video. Only has an effect if `do_rescale` is set to `True`. Can be
+            Scale factor to use if rescaling the image. Only has an effect if `do_rescale` is set to `True`. Can be
             overridden by the `rescale_factor` parameter in the `preprocess` method.
         do_normalize (`bool`, *optional*, defaults to `True`):
-            Whether to normalize the image/video. Can be overridden by the `do_normalize` parameter in the `preprocess`
+            Whether to normalize the image. Can be overridden by the `do_normalize` parameter in the `preprocess`
             method. Can be overridden by the `do_normalize` parameter in the `preprocess` method.
         image_mean (`float` or `List[float]`, *optional*, defaults to `IMAGENET_STANDARD_MEAN`):
-            Mean to use if normalizing the image or each video frame. This is a float or list of floats the length of the number of
-            channels in the image/video. Can be overridden by the `image_mean` parameter in the `preprocess` method. Can be
+            Mean to use if normalizing the image. This is a float or list of floats the length of the number of
+            channels in the image. Can be overridden by the `image_mean` parameter in the `preprocess` method. Can be
             overridden by the `image_mean` parameter in the `preprocess` method.
         image_std (`float` or `List[float]`, *optional*, defaults to `IMAGENET_STANDARD_STD`):
-            Standard deviation to use if normalizing the image or each video frame. This is a float or list of floats the length of the
-            number of channels in the image/video. Can be overridden by the `image_std` parameter in the `preprocess` method.
+            Standard deviation to use if normalizing the image. This is a float or list of floats the length of the
+            number of channels in the image. Can be overridden by the `image_std` parameter in the `preprocess` method.
             Can be overridden by the `image_std` parameter in the `preprocess` method.
         do_convert_rgb (`bool`, *optional*, defaults to `True`):
-            Whether to convert the image to RGB. Works only for images.
+            Whether to convert the image to RGB.
     """
 
     model_input_names = ["pixel_values"]
@@ -189,6 +190,7 @@ class InstructBlipImageProcessor(BaseImageProcessor):
             **kwargs,
         )
 
+    # Ignore copy
     def preprocess(
         self,
         images: ImageInput = None,
@@ -310,6 +312,7 @@ class InstructBlipImageProcessor(BaseImageProcessor):
 
         return encoded_outputs
 
+    # Ignore copy
     def _preprocess_image(
         self,
         image: ImageInput = None,
