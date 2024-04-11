@@ -18,7 +18,7 @@
 # to defer the actual importing for when the objects are requested. This way `import transformers` provides the names
 # in the namespace without actually importing anything (and especially none of the backends).
 
-__version__ = "4.39.0.dev0"
+__version__ = "4.40.0.dev0"
 
 from typing import TYPE_CHECKING
 
@@ -42,6 +42,7 @@ from .utils import (
     is_timm_available,
     is_tokenizers_available,
     is_torch_available,
+    is_torchaudio_available,
     is_torchvision_available,
     is_vision_available,
     logging,
@@ -487,9 +488,11 @@ _import_structure = {
         "GPTSanJapaneseConfig",
         "GPTSanJapaneseTokenizer",
     ],
-    "models.graphormer": [
-        "GRAPHORMER_PRETRAINED_CONFIG_ARCHIVE_MAP",
-        "GraphormerConfig",
+    "models.graphormer": ["GRAPHORMER_PRETRAINED_CONFIG_ARCHIVE_MAP", "GraphormerConfig"],
+    "models.grounding_dino": [
+        "GROUNDING_DINO_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "GroundingDinoConfig",
+        "GroundingDinoProcessor",
     ],
     "models.groupvit": [
         "GROUPVIT_PRETRAINED_CONFIG_ARCHIVE_MAP",
@@ -554,6 +557,12 @@ _import_structure = {
     "models.llava": [
         "LLAVA_PRETRAINED_CONFIG_ARCHIVE_MAP",
         "LlavaConfig",
+        "LlavaProcessor",
+    ],
+    "models.llava_next": [
+        "LLAVA_NEXT_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "LlavaNextConfig",
+        "LlavaNextProcessor",
     ],
     "models.longformer": [
         "LONGFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP",
@@ -638,6 +647,11 @@ _import_structure = {
         "MusicgenConfig",
         "MusicgenDecoderConfig",
     ],
+    "models.musicgen_melody": [
+        "MUSICGEN_MELODY_PRETRAINED_MODEL_ARCHIVE_LIST",
+        "MusicgenMelodyConfig",
+        "MusicgenMelodyDecoderConfig",
+    ],
     "models.mvp": ["MvpConfig", "MvpTokenizer"],
     "models.nat": ["NAT_PRETRAINED_CONFIG_ARCHIVE_MAP", "NatConfig"],
     "models.nezha": ["NEZHA_PRETRAINED_CONFIG_ARCHIVE_MAP", "NezhaConfig"],
@@ -714,12 +728,16 @@ _import_structure = {
         "ProphetNetTokenizer",
     ],
     "models.pvt": ["PVT_PRETRAINED_CONFIG_ARCHIVE_MAP", "PvtConfig"],
-    "models.pvt_v2": ["PVT_V2_PRETRAINED_CONFIG_ARCHIVE_MAP", "PvtV2Config"],
+    "models.pvt_v2": ["PvtV2Config"],
     "models.qdqbert": ["QDQBERT_PRETRAINED_CONFIG_ARCHIVE_MAP", "QDQBertConfig"],
     "models.qwen2": [
         "QWEN2_PRETRAINED_CONFIG_ARCHIVE_MAP",
         "Qwen2Config",
         "Qwen2Tokenizer",
+    ],
+    "models.qwen2_moe": [
+        "QWEN2MOE_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "Qwen2MoeConfig",
     ],
     "models.rag": ["RagConfig", "RagRetriever", "RagTokenizer"],
     "models.realm": [
@@ -727,6 +745,7 @@ _import_structure = {
         "RealmConfig",
         "RealmTokenizer",
     ],
+    "models.recurrent_gemma": ["RecurrentGemmaConfig"],
     "models.reformer": ["REFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP", "ReformerConfig"],
     "models.regnet": ["REGNET_PRETRAINED_CONFIG_ARCHIVE_MAP", "RegNetConfig"],
     "models.rembert": ["REMBERT_PRETRAINED_CONFIG_ARCHIVE_MAP", "RemBertConfig"],
@@ -813,6 +832,7 @@ _import_structure = {
     ],
     "models.stablelm": ["STABLELM_PRETRAINED_CONFIG_ARCHIVE_MAP", "StableLmConfig"],
     "models.starcoder2": ["STARCODER2_PRETRAINED_CONFIG_ARCHIVE_MAP", "Starcoder2Config"],
+    "models.superpoint": ["SUPERPOINT_PRETRAINED_CONFIG_ARCHIVE_MAP", "SuperPointConfig"],
     "models.swiftformer": [
         "SWIFTFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP",
         "SwiftFormerConfig",
@@ -1070,6 +1090,7 @@ _import_structure = {
         "add_end_docstrings",
         "add_start_docstrings",
         "is_apex_available",
+        "is_av_available",
         "is_bitsandbytes_available",
         "is_datasets_available",
         "is_decord_available",
@@ -1091,6 +1112,7 @@ _import_structure = {
         "is_timm_available",
         "is_tokenizers_available",
         "is_torch_available",
+        "is_torch_mlu_available",
         "is_torch_neuroncore_available",
         "is_torch_npu_available",
         "is_torch_tpu_available",
@@ -1311,12 +1333,14 @@ else:
     _import_structure["models.flava"].extend(["FlavaFeatureExtractor", "FlavaImageProcessor", "FlavaProcessor"])
     _import_structure["models.fuyu"].extend(["FuyuImageProcessor", "FuyuProcessor"])
     _import_structure["models.glpn"].extend(["GLPNFeatureExtractor", "GLPNImageProcessor"])
+    _import_structure["models.grounding_dino"].extend(["GroundingDinoImageProcessor"])
     _import_structure["models.idefics"].extend(["IdeficsImageProcessor"])
     _import_structure["models.imagegpt"].extend(["ImageGPTFeatureExtractor", "ImageGPTImageProcessor"])
     _import_structure["models.instructblip"].extend(["InstructBlipImageProcessor"])
     _import_structure["models.layoutlmv2"].extend(["LayoutLMv2FeatureExtractor", "LayoutLMv2ImageProcessor"])
     _import_structure["models.layoutlmv3"].extend(["LayoutLMv3FeatureExtractor", "LayoutLMv3ImageProcessor"])
     _import_structure["models.levit"].extend(["LevitFeatureExtractor", "LevitImageProcessor"])
+    _import_structure["models.llava_next"].append("LlavaNextImageProcessor")
     _import_structure["models.mask2former"].append("Mask2FormerImageProcessor")
     _import_structure["models.maskformer"].extend(["MaskFormerFeatureExtractor", "MaskFormerImageProcessor"])
     _import_structure["models.mobilenet_v1"].extend(["MobileNetV1FeatureExtractor", "MobileNetV1ImageProcessor"])
@@ -1334,6 +1358,7 @@ else:
     _import_structure["models.segformer"].extend(["SegformerFeatureExtractor", "SegformerImageProcessor"])
     _import_structure["models.seggpt"].extend(["SegGptImageProcessor"])
     _import_structure["models.siglip"].append("SiglipImageProcessor")
+    _import_structure["models.superpoint"].extend(["SuperPointImageProcessor"])
     _import_structure["models.swin2sr"].append("Swin2SRImageProcessor")
     _import_structure["models.tvlt"].append("TvltImageProcessor")
     _import_structure["models.tvp"].append("TvpImageProcessor")
@@ -1417,7 +1442,6 @@ else:
             "WhisperTimeStampLogitsProcessor",
         ]
     )
-    _import_structure["generation_utils"] = []
     _import_structure["modeling_outputs"] = []
     _import_structure["modeling_utils"] = ["PreTrainedModel"]
 
@@ -1480,6 +1504,7 @@ else:
             "MODEL_FOR_IMAGE_SEGMENTATION_MAPPING",
             "MODEL_FOR_IMAGE_TO_IMAGE_MAPPING",
             "MODEL_FOR_INSTANCE_SEGMENTATION_MAPPING",
+            "MODEL_FOR_KEYPOINT_DETECTION_MAPPING",
             "MODEL_FOR_MASKED_IMAGE_MODELING_MAPPING",
             "MODEL_FOR_MASKED_LM_MAPPING",
             "MODEL_FOR_MASK_GENERATION_MAPPING",
@@ -1520,6 +1545,7 @@ else:
             "AutoModelForImageSegmentation",
             "AutoModelForImageToImage",
             "AutoModelForInstanceSegmentation",
+            "AutoModelForKeypointDetection",
             "AutoModelForMaskedImageModeling",
             "AutoModelForMaskedLM",
             "AutoModelForMaskGeneration",
@@ -2369,6 +2395,14 @@ else:
             "GraphormerPreTrainedModel",
         ]
     )
+    _import_structure["models.grounding_dino"].extend(
+        [
+            "GROUNDING_DINO_PRETRAINED_MODEL_ARCHIVE_LIST",
+            "GroundingDinoForObjectDetection",
+            "GroundingDinoModel",
+            "GroundingDinoPreTrainedModel",
+        ]
+    )
     _import_structure["models.groupvit"].extend(
         [
             "GROUPVIT_PRETRAINED_MODEL_ARCHIVE_LIST",
@@ -2526,7 +2560,13 @@ else:
             "LLAVA_PRETRAINED_MODEL_ARCHIVE_LIST",
             "LlavaForConditionalGeneration",
             "LlavaPreTrainedModel",
-            "LlavaProcessor",
+        ]
+    )
+    _import_structure["models.llava_next"].extend(
+        [
+            "LLAVA_NEXT_PRETRAINED_MODEL_ARCHIVE_LIST",
+            "LlavaNextForConditionalGeneration",
+            "LlavaNextPreTrainedModel",
         ]
     )
     _import_structure["models.longformer"].extend(
@@ -2788,6 +2828,15 @@ else:
             "MusicgenProcessor",
         ]
     )
+    _import_structure["models.musicgen_melody"].extend(
+        [
+            "MUSICGEN_MELODY_PRETRAINED_MODEL_ARCHIVE_LIST",
+            "MusicgenMelodyForCausalLM",
+            "MusicgenMelodyForConditionalGeneration",
+            "MusicgenMelodyModel",
+            "MusicgenMelodyPreTrainedModel",
+        ]
+    )
     _import_structure["models.mvp"].extend(
         [
             "MVP_PRETRAINED_MODEL_ARCHIVE_LIST",
@@ -3020,7 +3069,6 @@ else:
     )
     _import_structure["models.pvt_v2"].extend(
         [
-            "PVT_V2_PRETRAINED_MODEL_ARCHIVE_LIST",
             "PvtV2Backbone",
             "PvtV2ForImageClassification",
             "PvtV2Model",
@@ -3051,6 +3099,14 @@ else:
             "Qwen2PreTrainedModel",
         ]
     )
+    _import_structure["models.qwen2_moe"].extend(
+        [
+            "Qwen2MoeForCausalLM",
+            "Qwen2MoeForSequenceClassification",
+            "Qwen2MoeModel",
+            "Qwen2MoePreTrainedModel",
+        ]
+    )
     _import_structure["models.rag"].extend(
         [
             "RagModel",
@@ -3070,6 +3126,13 @@ else:
             "RealmRetriever",
             "RealmScorer",
             "load_tf_weights_in_realm",
+        ]
+    )
+    _import_structure["models.recurrent_gemma"].extend(
+        [
+            "RecurrentGemmaForCausalLM",
+            "RecurrentGemmaModel",
+            "RecurrentGemmaPreTrainedModel",
         ]
     )
     _import_structure["models.reformer"].extend(
@@ -3320,6 +3383,13 @@ else:
             "Starcoder2ForSequenceClassification",
             "Starcoder2Model",
             "Starcoder2PreTrainedModel",
+        ]
+    )
+    _import_structure["models.superpoint"].extend(
+        [
+            "SUPERPOINT_PRETRAINED_MODEL_ARCHIVE_LIST",
+            "SuperPointForKeypointDetection",
+            "SuperPointPreTrainedModel",
         ]
     )
     _import_structure["models.swiftformer"].extend(
@@ -3831,7 +3901,6 @@ else:
             "TFTopPLogitsWarper",
         ]
     )
-    _import_structure["generation_tf_utils"] = []
     _import_structure["keras_callbacks"] = ["KerasMetricCallback", "PushToHubCallback"]
     _import_structure["modeling_tf_outputs"] = []
     _import_structure["modeling_tf_utils"] = [
@@ -4553,6 +4622,21 @@ else:
     _import_structure["models.pop2piano"].append("Pop2PianoTokenizer")
     _import_structure["models.pop2piano"].append("Pop2PianoProcessor")
 
+try:
+    if not is_torchaudio_available():
+        raise OptionalDependencyNotAvailable()
+except OptionalDependencyNotAvailable:
+    from .utils import (
+        dummy_torchaudio_objects,
+    )
+
+    _import_structure["utils.dummy_torchaudio_objects"] = [
+        name for name in dir(dummy_torchaudio_objects) if not name.startswith("_")
+    ]
+else:
+    _import_structure["models.musicgen_melody"].append("MusicgenMelodyFeatureExtractor")
+    _import_structure["models.musicgen_melody"].append("MusicgenMelodyProcessor")
+
 
 # FLAX-backed objects
 try:
@@ -4583,7 +4667,6 @@ else:
             "FlaxWhisperTimeStampLogitsProcessor",
         ]
     )
-    _import_structure["generation_flax_utils"] = []
     _import_structure["modeling_flax_outputs"] = []
     _import_structure["modeling_flax_utils"] = ["FlaxPreTrainedModel"]
     _import_structure["models.albert"].extend(
@@ -5309,9 +5392,11 @@ if TYPE_CHECKING:
         GPTSanJapaneseConfig,
         GPTSanJapaneseTokenizer,
     )
-    from .models.graphormer import (
-        GRAPHORMER_PRETRAINED_CONFIG_ARCHIVE_MAP,
-        GraphormerConfig,
+    from .models.graphormer import GRAPHORMER_PRETRAINED_CONFIG_ARCHIVE_MAP, GraphormerConfig
+    from .models.grounding_dino import (
+        GROUNDING_DINO_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        GroundingDinoConfig,
+        GroundingDinoProcessor,
     )
     from .models.groupvit import (
         GROUPVIT_PRETRAINED_CONFIG_ARCHIVE_MAP,
@@ -5376,6 +5461,12 @@ if TYPE_CHECKING:
     from .models.llava import (
         LLAVA_PRETRAINED_CONFIG_ARCHIVE_MAP,
         LlavaConfig,
+        LlavaProcessor,
+    )
+    from .models.llava_next import (
+        LLAVA_NEXT_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        LlavaNextConfig,
+        LlavaNextProcessor,
     )
     from .models.longformer import (
         LONGFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP,
@@ -5460,6 +5551,11 @@ if TYPE_CHECKING:
         MusicgenConfig,
         MusicgenDecoderConfig,
     )
+    from .models.musicgen_melody import (
+        MUSICGEN_MELODY_PRETRAINED_MODEL_ARCHIVE_LIST,
+        MusicgenMelodyConfig,
+        MusicgenMelodyDecoderConfig,
+    )
     from .models.mvp import MvpConfig, MvpTokenizer
     from .models.nat import NAT_PRETRAINED_CONFIG_ARCHIVE_MAP, NatConfig
     from .models.nezha import NEZHA_PRETRAINED_CONFIG_ARCHIVE_MAP, NezhaConfig
@@ -5541,15 +5637,17 @@ if TYPE_CHECKING:
         ProphetNetTokenizer,
     )
     from .models.pvt import PVT_PRETRAINED_CONFIG_ARCHIVE_MAP, PvtConfig
-    from .models.pvt_v2 import PVT_V2_PRETRAINED_CONFIG_ARCHIVE_MAP, PvtV2Config
+    from .models.pvt_v2 import PvtV2Config
     from .models.qdqbert import QDQBERT_PRETRAINED_CONFIG_ARCHIVE_MAP, QDQBertConfig
     from .models.qwen2 import QWEN2_PRETRAINED_CONFIG_ARCHIVE_MAP, Qwen2Config, Qwen2Tokenizer
+    from .models.qwen2_moe import QWEN2MOE_PRETRAINED_CONFIG_ARCHIVE_MAP, Qwen2MoeConfig
     from .models.rag import RagConfig, RagRetriever, RagTokenizer
     from .models.realm import (
         REALM_PRETRAINED_CONFIG_ARCHIVE_MAP,
         RealmConfig,
         RealmTokenizer,
     )
+    from .models.recurrent_gemma import RecurrentGemmaConfig
     from .models.reformer import REFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP, ReformerConfig
     from .models.regnet import REGNET_PRETRAINED_CONFIG_ARCHIVE_MAP, RegNetConfig
     from .models.rembert import REMBERT_PRETRAINED_CONFIG_ARCHIVE_MAP, RemBertConfig
@@ -5636,6 +5734,7 @@ if TYPE_CHECKING:
     )
     from .models.stablelm import STABLELM_PRETRAINED_CONFIG_ARCHIVE_MAP, StableLmConfig
     from .models.starcoder2 import STARCODER2_PRETRAINED_CONFIG_ARCHIVE_MAP, Starcoder2Config
+    from .models.superpoint import SUPERPOINT_PRETRAINED_CONFIG_ARCHIVE_MAP, SuperPointConfig
     from .models.swiftformer import (
         SWIFTFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP,
         SwiftFormerConfig,
@@ -5890,6 +5989,7 @@ if TYPE_CHECKING:
         add_end_docstrings,
         add_start_docstrings,
         is_apex_available,
+        is_av_available,
         is_bitsandbytes_available,
         is_datasets_available,
         is_decord_available,
@@ -5911,6 +6011,7 @@ if TYPE_CHECKING:
         is_timm_available,
         is_tokenizers_available,
         is_torch_available,
+        is_torch_mlu_available,
         is_torch_neuroncore_available,
         is_torch_npu_available,
         is_torch_tpu_available,
@@ -6108,6 +6209,7 @@ if TYPE_CHECKING:
         )
         from .models.fuyu import FuyuImageProcessor, FuyuProcessor
         from .models.glpn import GLPNFeatureExtractor, GLPNImageProcessor
+        from .models.grounding_dino import GroundingDinoImageProcessor
         from .models.idefics import IdeficsImageProcessor
         from .models.imagegpt import ImageGPTFeatureExtractor, ImageGPTImageProcessor
         from .models.instructblip import InstructBlipImageProcessor
@@ -6120,6 +6222,7 @@ if TYPE_CHECKING:
             LayoutLMv3ImageProcessor,
         )
         from .models.levit import LevitFeatureExtractor, LevitImageProcessor
+        from .models.llava_next import LlavaNextImageProcessor
         from .models.mask2former import Mask2FormerImageProcessor
         from .models.maskformer import (
             MaskFormerFeatureExtractor,
@@ -6149,6 +6252,7 @@ if TYPE_CHECKING:
         from .models.segformer import SegformerFeatureExtractor, SegformerImageProcessor
         from .models.seggpt import SegGptImageProcessor
         from .models.siglip import SiglipImageProcessor
+        from .models.superpoint import SuperPointImageProcessor
         from .models.swin2sr import Swin2SRImageProcessor
         from .models.tvlt import TvltImageProcessor
         from .models.tvp import TvpImageProcessor
@@ -6275,6 +6379,7 @@ if TYPE_CHECKING:
             MODEL_FOR_IMAGE_SEGMENTATION_MAPPING,
             MODEL_FOR_IMAGE_TO_IMAGE_MAPPING,
             MODEL_FOR_INSTANCE_SEGMENTATION_MAPPING,
+            MODEL_FOR_KEYPOINT_DETECTION_MAPPING,
             MODEL_FOR_MASK_GENERATION_MAPPING,
             MODEL_FOR_MASKED_IMAGE_MODELING_MAPPING,
             MODEL_FOR_MASKED_LM_MAPPING,
@@ -6315,6 +6420,7 @@ if TYPE_CHECKING:
             AutoModelForImageSegmentation,
             AutoModelForImageToImage,
             AutoModelForInstanceSegmentation,
+            AutoModelForKeypointDetection,
             AutoModelForMaskedImageModeling,
             AutoModelForMaskedLM,
             AutoModelForMaskGeneration,
@@ -7022,6 +7128,12 @@ if TYPE_CHECKING:
             GraphormerModel,
             GraphormerPreTrainedModel,
         )
+        from .models.grounding_dino import (
+            GROUNDING_DINO_PRETRAINED_MODEL_ARCHIVE_LIST,
+            GroundingDinoForObjectDetection,
+            GroundingDinoModel,
+            GroundingDinoPreTrainedModel,
+        )
         from .models.groupvit import (
             GROUPVIT_PRETRAINED_MODEL_ARCHIVE_LIST,
             GroupViTModel,
@@ -7146,7 +7258,11 @@ if TYPE_CHECKING:
             LLAVA_PRETRAINED_MODEL_ARCHIVE_LIST,
             LlavaForConditionalGeneration,
             LlavaPreTrainedModel,
-            LlavaProcessor,
+        )
+        from .models.llava_next import (
+            LLAVA_NEXT_PRETRAINED_MODEL_ARCHIVE_LIST,
+            LlavaNextForConditionalGeneration,
+            LlavaNextPreTrainedModel,
         )
         from .models.longformer import (
             LONGFORMER_PRETRAINED_MODEL_ARCHIVE_LIST,
@@ -7362,6 +7478,13 @@ if TYPE_CHECKING:
             MusicgenPreTrainedModel,
             MusicgenProcessor,
         )
+        from .models.musicgen_melody import (
+            MUSICGEN_MELODY_PRETRAINED_MODEL_ARCHIVE_LIST,
+            MusicgenMelodyForCausalLM,
+            MusicgenMelodyForConditionalGeneration,
+            MusicgenMelodyModel,
+            MusicgenMelodyPreTrainedModel,
+        )
         from .models.mvp import (
             MVP_PRETRAINED_MODEL_ARCHIVE_LIST,
             MvpForCausalLM,
@@ -7547,7 +7670,6 @@ if TYPE_CHECKING:
             PvtPreTrainedModel,
         )
         from .models.pvt_v2 import (
-            PVT_V2_PRETRAINED_MODEL_ARCHIVE_LIST,
             PvtV2Backbone,
             PvtV2ForImageClassification,
             PvtV2Model,
@@ -7573,6 +7695,12 @@ if TYPE_CHECKING:
             Qwen2Model,
             Qwen2PreTrainedModel,
         )
+        from .models.qwen2_moe import (
+            Qwen2MoeForCausalLM,
+            Qwen2MoeForSequenceClassification,
+            Qwen2MoeModel,
+            Qwen2MoePreTrainedModel,
+        )
         from .models.rag import (
             RagModel,
             RagPreTrainedModel,
@@ -7589,6 +7717,11 @@ if TYPE_CHECKING:
             RealmRetriever,
             RealmScorer,
             load_tf_weights_in_realm,
+        )
+        from .models.recurrent_gemma import (
+            RecurrentGemmaForCausalLM,
+            RecurrentGemmaModel,
+            RecurrentGemmaPreTrainedModel,
         )
         from .models.reformer import (
             REFORMER_PRETRAINED_MODEL_ARCHIVE_LIST,
@@ -7798,6 +7931,11 @@ if TYPE_CHECKING:
             Starcoder2ForSequenceClassification,
             Starcoder2Model,
             Starcoder2PreTrainedModel,
+        )
+        from .models.superpoint import (
+            SUPERPOINT_PRETRAINED_MODEL_ARCHIVE_LIST,
+            SuperPointForKeypointDetection,
+            SuperPointPreTrainedModel,
         )
         from .models.swiftformer import (
             SWIFTFORMER_PRETRAINED_MODEL_ARCHIVE_LIST,
@@ -8813,6 +8951,13 @@ if TYPE_CHECKING:
             Pop2PianoTokenizer,
         )
 
+    try:
+        if not is_torchaudio_available():
+            raise OptionalDependencyNotAvailable()
+    except OptionalDependencyNotAvailable:
+        from .utils.dummy_torchaudio_objects import *
+    else:
+        from .models.musicgen_melody import MusicgenMelodyFeatureExtractor, MusicgenMelodyProcessor
     try:
         if not is_flax_available():
             raise OptionalDependencyNotAvailable()
