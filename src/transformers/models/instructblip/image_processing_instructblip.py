@@ -63,7 +63,7 @@ def make_batched(videos) -> List[List[ImageInput]]:
 
 class InstructBlipImageProcessor(BaseImageProcessor):
     r"""
-    Constructs an Instruct image processor.
+    Constructs an InstructBLIP image processor.
 
     Args:
         do_resize (`bool`, *optional*, defaults to `True`):
