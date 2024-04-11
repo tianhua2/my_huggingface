@@ -1400,9 +1400,14 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         "A person is eating a bowl of pasta, and they are using a fork to eat it. The person is sitting at a table, and the plate of pasta is on the table in front"
         ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        batch_size = pixel_values.shape[0]
 
         # step 1: forward the images through the vision encoder,
         # to get image embeddings of shape (batch_size, seq_len, hidden_size)
+        if pixel_values.dim() == 5:
+            _, frames, channel, height, width = pixel_values.shape
+            pixel_values = pixel_values.reshape(batch_size * frames, channel, height, width)
+
         vision_outputs = self.vision_model(
             pixel_values=pixel_values,
             output_attentions=output_attentions,
@@ -1417,8 +1422,12 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         # difference with BLIP-2 here: we also feed the instruction prompt to the Q-Former
         query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
         query_attention_mask = torch.ones(query_tokens.size()[:-1], dtype=torch.long, device=image_embeds.device)
+
         if qformer_attention_mask is None:
             qformer_attention_mask = torch.ones_like(qformer_input_ids)
+        if query_attention_mask.shape[0] != batch_size:
+            qformer_input_ids = qformer_input_ids.repeat_interleave(frames, dim=0)
+            qformer_attention_mask = qformer_attention_mask.repeat_interleave(frames, dim=0)
         qformer_attention_mask = torch.cat([query_attention_mask, qformer_attention_mask], dim=1)
         query_outputs = self.qformer(
             input_ids=qformer_input_ids,
@@ -1434,6 +1443,12 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
 
         # step 3: use the language model, conditioned on the query outputs and the prompt
         language_model_inputs = self.language_projection(query_output)
+
+        # if video is passed unbatch the embeddings back, by moving frames to seq-len
+        if language_model_inputs.shape[0] != batch_size:
+            language_model_inputs = language_model_inputs.reshape(
+                batch_size, self.config.num_query_tokens * frames, -1
+            )
         language_model_attention_mask = torch.ones(
             language_model_inputs.size()[:-1], dtype=torch.long, device=language_model_inputs.device
         )
