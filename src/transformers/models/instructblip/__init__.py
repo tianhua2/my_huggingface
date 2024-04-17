@@ -24,8 +24,15 @@ _import_structure = {
         "InstructBlipVisionConfig",
     ],
     "image_processing_instructblip": ["InstructBlipImageProcessor"],
-    "processing_instructblip": ["InstructBlipProcessor"],
 }
+
+try:
+    if not is_vision_available():
+        raise OptionalDependencyNotAvailable()
+except OptionalDependencyNotAvailable:
+    pass
+else:
+    _import_structure["processing_instructblip"] = ["InstructBlipProcessor"],
 
 try:
     if not is_torch_available():
