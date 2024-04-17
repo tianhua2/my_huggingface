@@ -38,6 +38,7 @@ if is_vision_available():
 logger = logging.get_logger(__name__)
 
 
+# Copied from transformers.models.superpoint.image_processing_superpoint.is_grayscale
 def is_grayscale(
     image: ImageInput,
     input_data_format: Optional[Union[str, ChannelDimension]] = None,
@@ -52,6 +53,7 @@ def is_grayscale(
         return np.all(image[..., 0] == image[..., 1]) and np.all(image[..., 1] == image[..., 2])
 
 
+# Copied from transformers.models.superpoint.image_processing_superpoint.convert_to_grayscale
 def convert_to_grayscale(
     image: ImageInput,
     input_data_format: Optional[Union[str, ChannelDimension]] = None,
@@ -88,9 +90,9 @@ def convert_to_grayscale(
     return image
 
 
-class SuperPointImageProcessor(BaseImageProcessor):
+class SuperGlueImageProcessor(BaseImageProcessor):
     r"""
-    Constructs a SuperPoint image processor.
+    Constructs a SuperGlue image processor.
 
     Args:
         do_resize (`bool`, *optional*, defaults to `True`):
@@ -155,6 +157,7 @@ class SuperPointImageProcessor(BaseImageProcessor):
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
         """
+
         size = get_size_dict(size, default_to_square=False)
 
         return resize(
@@ -270,6 +273,17 @@ class SuperPointImageProcessor(BaseImageProcessor):
         images = [
             to_channel_dimension_format(image, data_format, input_channel_dim=input_data_format) for image in images
         ]
+
+        batch_size = len(images)
+
+        if batch_size % 2 != 0:
+            logger.warning(
+                "SuperGlue takes pairs of images, but the number of images provided in impair, so the last image will be doubled."
+            )
+            images.append(images[-1])
+
+        channels, height, width = images[0].shape
+        images = np.array(images).reshape(-1, 2, channels, height, width)
 
         data = {"pixel_values": images}
 

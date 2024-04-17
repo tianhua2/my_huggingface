@@ -834,6 +834,7 @@ _import_structure = {
     ],
     "models.stablelm": ["STABLELM_PRETRAINED_CONFIG_ARCHIVE_MAP", "StableLmConfig"],
     "models.starcoder2": ["STARCODER2_PRETRAINED_CONFIG_ARCHIVE_MAP", "Starcoder2Config"],
+    "models.superglue": ["SUPERGLUE_PRETRAINED_CONFIG_ARCHIVE_MAP", "SuperGlueConfig"],
     "models.superpoint": ["SUPERPOINT_PRETRAINED_CONFIG_ARCHIVE_MAP", "SuperPointConfig"],
     "models.swiftformer": [
         "SWIFTFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP",
@@ -1360,6 +1361,7 @@ else:
     _import_structure["models.segformer"].extend(["SegformerFeatureExtractor", "SegformerImageProcessor"])
     _import_structure["models.seggpt"].extend(["SegGptImageProcessor"])
     _import_structure["models.siglip"].append("SiglipImageProcessor")
+    _import_structure["models.superglue"].extend(["SuperGlueImageProcessor"])
     _import_structure["models.superpoint"].extend(["SuperPointImageProcessor"])
     _import_structure["models.swin2sr"].append("Swin2SRImageProcessor")
     _import_structure["models.tvlt"].append("TvltImageProcessor")
@@ -1503,6 +1505,7 @@ else:
             "MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING",
             "MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING",
             "MODEL_FOR_IMAGE_MAPPING",
+            "MODEL_FOR_IMAGE_MATCHING_MAPPING",
             "MODEL_FOR_IMAGE_SEGMENTATION_MAPPING",
             "MODEL_FOR_IMAGE_TO_IMAGE_MAPPING",
             "MODEL_FOR_INSTANCE_SEGMENTATION_MAPPING",
@@ -1544,6 +1547,7 @@ else:
             "AutoModelForDepthEstimation",
             "AutoModelForDocumentQuestionAnswering",
             "AutoModelForImageClassification",
+            "AutoModelForImageMatching",
             "AutoModelForImageSegmentation",
             "AutoModelForImageToImage",
             "AutoModelForInstanceSegmentation",
@@ -3401,6 +3405,13 @@ else:
             "Starcoder2ForSequenceClassification",
             "Starcoder2Model",
             "Starcoder2PreTrainedModel",
+        ]
+    )
+    _import_structure["models.superglue"].extend(
+        [
+            "SUPERGLUE_PRETRAINED_MODEL_ARCHIVE_LIST",
+            "SuperGlueForImageMatching",
+            "SuperGluePreTrainedModel",
         ]
     )
     _import_structure["models.superpoint"].extend(
@@ -5754,6 +5765,7 @@ if TYPE_CHECKING:
     )
     from .models.stablelm import STABLELM_PRETRAINED_CONFIG_ARCHIVE_MAP, StableLmConfig
     from .models.starcoder2 import STARCODER2_PRETRAINED_CONFIG_ARCHIVE_MAP, Starcoder2Config
+    from .models.superglue import SUPERGLUE_PRETRAINED_CONFIG_ARCHIVE_MAP, SuperGlueConfig
     from .models.superpoint import SUPERPOINT_PRETRAINED_CONFIG_ARCHIVE_MAP, SuperPointConfig
     from .models.swiftformer import (
         SWIFTFORMER_PRETRAINED_CONFIG_ARCHIVE_MAP,
@@ -6272,6 +6284,7 @@ if TYPE_CHECKING:
         from .models.segformer import SegformerFeatureExtractor, SegformerImageProcessor
         from .models.seggpt import SegGptImageProcessor
         from .models.siglip import SiglipImageProcessor
+        from .models.superglue import SuperGlueImageProcessor
         from .models.superpoint import SuperPointImageProcessor
         from .models.swin2sr import Swin2SRImageProcessor
         from .models.tvlt import TvltImageProcessor
@@ -6396,6 +6409,7 @@ if TYPE_CHECKING:
             MODEL_FOR_DOCUMENT_QUESTION_ANSWERING_MAPPING,
             MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING,
             MODEL_FOR_IMAGE_MAPPING,
+            MODEL_FOR_IMAGE_MATCHING_MAPPING,
             MODEL_FOR_IMAGE_SEGMENTATION_MAPPING,
             MODEL_FOR_IMAGE_TO_IMAGE_MAPPING,
             MODEL_FOR_INSTANCE_SEGMENTATION_MAPPING,
@@ -6437,6 +6451,7 @@ if TYPE_CHECKING:
             AutoModelForDepthEstimation,
             AutoModelForDocumentQuestionAnswering,
             AutoModelForImageClassification,
+            AutoModelForImageMatching,
             AutoModelForImageSegmentation,
             AutoModelForImageToImage,
             AutoModelForInstanceSegmentation,
@@ -7963,6 +7978,11 @@ if TYPE_CHECKING:
             Starcoder2ForSequenceClassification,
             Starcoder2Model,
             Starcoder2PreTrainedModel,
+        )
+        from .models.superglue import (
+            SUPERGLUE_PRETRAINED_MODEL_ARCHIVE_LIST,
+            SuperGlueForImageMatching,
+            SuperGluePreTrainedModel,
         )
         from .models.superpoint import (
             SUPERPOINT_PRETRAINED_MODEL_ARCHIVE_LIST,
