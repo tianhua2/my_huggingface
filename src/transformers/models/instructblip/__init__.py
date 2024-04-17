@@ -32,7 +32,7 @@ try:
 except OptionalDependencyNotAvailable:
     pass
 else:
-    _import_structure["processing_instructblip"] = ["InstructBlipProcessor"],
+    _import_structure["processing_instructblip"] = ["InstructBlipProcessor"]
 
 try:
     if not is_torch_available():
