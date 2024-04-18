@@ -18,6 +18,7 @@ import math
 from typing import Dict, List, Optional, Union
 
 import numpy as np
+import torch
 
 from ...image_processing_utils import BaseImageProcessor, BatchFeature, get_size_dict, select_best_resolution
 from ...image_transforms import (
@@ -421,11 +422,11 @@ class LlavaNextImageProcessor(BaseImageProcessor):
 
         image_size = get_image_size(image, channel_dim=input_data_format)
         best_resolution = select_best_resolution(image_size, possible_resolutions)
+
         resized_image = self._resize_for_patching(
             image, best_resolution, resample=resample, input_data_format=input_data_format
         )
         padded_image = self._pad_for_patching(resized_image, best_resolution, input_data_format=input_data_format)
-
         patches = divide_to_patches(padded_image, patch_size=patch_size, input_data_format=input_data_format)
 
         # make sure that all patches are in the input data format
@@ -525,6 +526,7 @@ class LlavaNextImageProcessor(BaseImageProcessor):
         do_center_crop = do_center_crop if do_center_crop is not None else self.do_center_crop
         crop_size = crop_size if crop_size is not None else self.crop_size
         crop_size = get_size_dict(crop_size, param_name="crop_size", default_to_square=True)
+
         do_rescale = do_rescale if do_rescale is not None else self.do_rescale
         rescale_factor = rescale_factor if rescale_factor is not None else self.rescale_factor
         do_normalize = do_normalize if do_normalize is not None else self.do_normalize
@@ -571,6 +573,7 @@ class LlavaNextImageProcessor(BaseImageProcessor):
 
         new_images = []
         image_sizes = [get_image_size(image, channel_dim=input_data_format) for image in images]
+        
         for image in images:
             # convert image into a list of patches
             # we intentially use the same data format as the input data format
@@ -605,4 +608,48 @@ class LlavaNextImageProcessor(BaseImageProcessor):
 
         data = {"pixel_values": new_images, "image_sizes": image_sizes}
 
+        # TODO: Add option to pad in this method itself
         return BatchFeature(data=data, tensor_type=return_tensors)
+
+    def pad(
+        self,
+        pixel_values: List,  # list of np.array(PIL.Image) objects ; list(num_patches, num_channels, image_height, image_width)
+        max_num_patches: Optional[int] = None,
+        pad_token_id: int = 32001, 
+    ) -> torch.FloatTensor:
+        """
+        Args:
+            max_num_patches: If provided, pad to max_num_patches number of 
+            patches. Else, use the maximum length of images provided in the 
+            batch.
+        Returns:
+            (`torch.FloatTensor` of shape `(batch_size, num_channels, image_size, image_size))
+        """
+        
+        max_patches_in_batch = max([len(x) for x in pixel_values])
+        if max_num_patches:
+            if max_num_patches < max_patches_in_batch:
+                raise ValueError(f"Please provide a higher max_num_patches \
+                            value since the input batch has higher patches\
+                            {max_patches_in_batch}")
+            if max_patches_in_batch > max_num_patches:
+                raise ValueError(f"We do not allow truncation of images yet. Hence give a padding of greater than {max_patches_in_batch}")
+            max_patches_in_batch = max_num_patches
+        
+        padded_images = np.array([
+            np.concatenate(
+                [
+                    x, 
+                    np.ones(
+                        [max_patches_in_batch - x.shape[0]] + list(x.shape[1:]), 
+                        dtype=x.dtype
+                    ) * pad_token_id
+                ],
+                axis=0
+            )
+            if x.shape[0] < max_patches_in_batch
+            else x
+            for x in pixel_values
+        ])
+        return torch.FloatTensor(padded_images)
+ 
