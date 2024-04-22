@@ -187,8 +187,8 @@ class DynamicCache(Cache):
 
 def quantize(tensor, n_bits, q_group_size, scale=None):
     qtype = qint4 if n_bits==4 else qint2
-    #qtensor = QBitsTensor.quantize(tensor, axis=0, qtype=qtype, group_size=q_group_size)
-    qtensor = QTensor.quantize(tensor, qtype=qint4, scale=scale)
+    qtensor = QBitsTensor.quantize(tensor, axis=0, qtype=qtype, group_size=q_group_size)
+    #qtensor = QTensor.quantize(tensor, qtype=qint4, scale=scale)
 
     #tensor = tensor.reshape(-1, q_group_size)
     #max_val = tensor.amax(dim=1)
@@ -210,6 +210,7 @@ class QuantCache(Cache):
         self._key_cache_quant: List[torch.Tensor] = []
         self._value_cache_quant: List[torch.Tensor] = []
         self.seen_token = 0
+        self.residual_length = 128
         self._scale = None
 
     def __getitem__(self, layer_idx: int) -> List[Tuple[torch.Tensor]]:
@@ -247,11 +248,7 @@ class QuantCache(Cache):
         # Update the number of seen tokens
         if layer_idx == 0:
             self.seen_token += key_states.shape[-2]
-        
-        if self._scale is None:
-            self._scale = absmax_scale(key_states, qtype=qint4)
 
-        # Update the cache
         if len(self.key_cache) <= layer_idx:
             self._key_cache_quant.append(quantize(key_states.contiguous(), n_bits=4, q_group_size=64))
             self._value_cache_quant.append(quantize(value_states.contiguous(), n_bits=4, q_group_size=64))
@@ -277,7 +274,7 @@ class QuantCache(Cache):
                     ],
                     dim=-2,
                 )
-            if self.key_cache[layer_idx].dim() == 4 and self.key_cache[layer_idx].shape[-2] + 1 == 128:            
+            if self.key_cache[layer_idx].dim() == 4 and self.key_cache[layer_idx].shape[-2] + 1 == self.residual_length:            
                 self._key_cache_quant[layer_idx] = quantize(keys_to_return.contiguous(), n_bits=4, q_group_size=64)
                 self._value_cache_quant[layer_idx] = quantize(values_to_return.contiguous(), n_bits=4, q_group_size=64)
                 self.key_cache[layer_idx] = torch.zeros(0, dtype=key_states.dtype, device=key_states.device)
@@ -300,28 +297,16 @@ class QuantCache(Cache):
 
     def reorder_cache(self, beam_idx: torch.LongTensor):
         """Reorders the cache for beam search, given the selected beam indices."""
-        for layer_idx in range(len(self.key_cache)):
-            device = self.key_cache[layer_idx].device
-            self.key_cache[layer_idx] = self.key_cache[layer_idx].index_select(0, beam_idx.to(device))
-            device = self.value_cache[layer_idx].device
-            self.value_cache[layer_idx] = self.value_cache[layer_idx].index_select(0, beam_idx.to(device))
+        pass
 
     def to_legacy_cache(self) -> Tuple[Tuple[torch.Tensor], Tuple[torch.Tensor]]:
         """Converts the `DynamicCache` instance into the its equivalent in the legacy cache format."""
-        legacy_cache = ()
-        for layer_idx in range(len(self)):
-            legacy_cache += ((self.key_cache[layer_idx], self.value_cache[layer_idx]),)
-        return legacy_cache
+        return None
 
     @classmethod
     def from_legacy_cache(cls, past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None) -> "DynamicCache":
         """Converts a cache in the legacy cache format into an equivalent `DynamicCache`."""
-        cache = cls()
-        if past_key_values is not None:
-            for layer_idx in range(len(past_key_values)):
-                key_states, value_states = past_key_values[layer_idx]
-                cache.update(key_states, value_states, layer_idx)
-        return cache
+        return None
 
 
 class SinkCache(Cache):

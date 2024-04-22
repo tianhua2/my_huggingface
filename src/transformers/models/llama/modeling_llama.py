@@ -973,10 +973,7 @@ class LlamaModel(LlamaPreTrainedModel):
 
         past_seen_tokens = 0
         if use_cache:  # kept for BC (cache positions)
-            if past_key_values is None:
-                # QuantCache, DynamicCache
-                past_key_values = QuantCache()
-            past_seen_tokens = past_key_values.get_seq_length()    
+            past_seen_tokens = past_key_values.get_seq_length() 
 
         if cache_position is None:
             if isinstance(past_key_values, StaticCache):
@@ -1287,6 +1284,8 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
                 and cache_length + input_ids.shape[1] > max_cache_length
             ):
                 attention_mask = attention_mask[:, -max_cache_length:]
+        else:
+            past_key_values = QuantCache()
 
         position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
@@ -1311,6 +1310,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         else:
             cache_position = cache_position[-input_length:]
 
+        print(past_key_values)
         if has_static_cache:
             past_key_values = None
 
