@@ -1425,6 +1425,45 @@ class TrainingArguments:
         },
     )
 
+    log_every_minutes: int = field(
+        default=None,
+        metadata={
+            "help": (
+                "Log every X minutes. Should be an integer in minutes. If given, this will trigger logging"
+                " approximately every given minutes in addition to other specified logging strategies. Note that this"
+                " is only an approximation: time since last log will be checked after every step, so for a long step"
+                " duration, this may overshoot the given value. It's best to be conversative in your minutes"
+                " estimation."
+            )
+        },
+    )
+
+    save_every_minutes: int = field(
+        default=None,
+        metadata={
+            "help": (
+                "Save every X minutes. Should be an integer in minutes. If given, this will trigger saving"
+                " approximately every given minutes in addition to other specified save strategies. Note that this"
+                " is only an approximation: time since last save will be checked after every step, so for a long step"
+                " duration, this may overshoot the given value. It's best to be conversative in your minutes"
+                " estimation."
+            )
+        },
+    )
+
+    eval_every_minutes: int = field(
+        default=None,
+        metadata={
+            "help": (
+                "Evaluate every X minutes. Should be an integer in minutes. If given, this will trigger evaluation"
+                " approximately every given minutes in addition to other specified eval strategies. Note that this"
+                " is only an approximation: time since last eval will be checked after every step, so for a long step"
+                " duration, this may overshoot the given value. It's best to be conversative in your minutes"
+                " estimation."
+            )
+        },
+    )
+
     def __post_init__(self):
         # Parse in args that could be `dict` sent in from the CLI as a string
         for field in _VALID_DICT_FIELDS:
