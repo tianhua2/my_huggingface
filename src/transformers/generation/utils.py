@@ -15,7 +15,6 @@
 # limitations under the License.
 
 import copy
-from time import perf_counter
 import inspect
 import warnings
 from dataclasses import dataclass
@@ -46,7 +45,7 @@ from .candidate_generator import (
     _prepare_attention_mask,
     _prepare_token_type_ids,
 )
-from .configuration_utils import GenerationConfig, GenerationMode
+from .configuration_utils import CacheConfig, GenerationConfig, GenerationMode
 from .logits_process import (
     EncoderNoRepeatNGramLogitsProcessor,
     EncoderRepetitionPenaltyLogitsProcessor,
@@ -1225,6 +1224,7 @@ class GenerationMixin:
         self,
         inputs: Optional[torch.Tensor] = None,
         generation_config: Optional[GenerationConfig] = None,
+        cache_config: Optional[CacheConfig] = CacheConfig(),
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         prefix_allowed_tokens_fn: Optional[Callable[[int, torch.Tensor], List[int]]] = None,
@@ -1444,6 +1444,12 @@ class GenerationMixin:
                         " Make sure it has a `_setup_cache` function."
                     )
                 self._setup_cache(cache_cls, max_batch_size=batch_size, max_cache_len=generation_config.max_length)
+            elif generation_config.cache_implementation == "quantized":
+                model_kwargs["past_key_values"] = QuantCache(
+                    n_bits=cache_config.nbits,
+                    q_group_size=cache_config.q_group_size,
+                    residual_length=cache_config.residual_length,
+                )
 
         self._validate_generated_length(generation_config, input_ids_length, has_default_max_length)
 

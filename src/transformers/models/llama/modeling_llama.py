@@ -30,7 +30,7 @@ from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
 from ...activations import ACT2FN
-from ...cache_utils import Cache, DynamicCache, StaticCache, QuantCache
+from ...cache_utils import Cache, DynamicCache, QuantCache, StaticCache
 from ...modeling_attn_mask_utils import AttentionMaskConverter
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
@@ -973,7 +973,11 @@ class LlamaModel(LlamaPreTrainedModel):
 
         past_seen_tokens = 0
         if use_cache:  # kept for BC (cache positions)
-            past_seen_tokens = past_key_values.get_seq_length() 
+            if not isinstance(past_key_values, StaticCache):
+                past_key_values = DynamicCache.from_legacy_cache(past_key_values)
+                past_seen_tokens = past_key_values.get_seq_length()
+            elif isinstance(past_key_values, QuantCache):
+                past_seen_tokens = past_key_values.get_seq_length()
 
         if cache_position is None:
             if isinstance(past_key_values, StaticCache):
@@ -1036,17 +1040,17 @@ class LlamaModel(LlamaPreTrainedModel):
             all_hidden_states += (hidden_states,)
 
         next_cache = None
-        if use_cache:
-           next_cache = (
-               next_decoder_cache.to_legacy_cache() if isinstance(next_decoder_cache, Cache) else next_decoder_cache
-           )
-        if not return_dict:
-            return tuple(
-                v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None
+        if use_cache and not isinstance(next_decoder_cache, QuantCache):
+            next_cache = (
+                next_decoder_cache.to_legacy_cache() if isinstance(next_decoder_cache, Cache) else next_decoder_cache
             )
+        elif isinstance(next_decoder_cache, QuantCache):
+            next_cache = next_decoder_cache
+        if not return_dict:
+            return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
         return BaseModelOutputWithPast(
             last_hidden_state=hidden_states,
-            past_key_values=next_decoder_cache,
+            past_key_values=next_cache,
             hidden_states=all_hidden_states,
             attentions=all_self_attns,
         )
@@ -1284,8 +1288,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
                 and cache_length + input_ids.shape[1] > max_cache_length
             ):
                 attention_mask = attention_mask[:, -max_cache_length:]
-        else:
-            past_key_values = QuantCache()
 
         position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
@@ -1310,7 +1312,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         else:
             cache_position = cache_position[-input_length:]
 
-        print(past_key_values)
         if has_static_cache:
             past_key_values = None
 

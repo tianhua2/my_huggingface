@@ -18,6 +18,7 @@ import copy
 import json
 import os
 import warnings
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 
 from .. import __version__
@@ -1090,3 +1091,97 @@ class GenerationConfig(PushToHubMixin):
         # Remove all the attributes that were updated, without modifying the input dict
         unused_kwargs = {key: value for key, value in kwargs.items() if key not in to_remove}
         return unused_kwargs
+
+
+@dataclass
+class CacheConfig:
+    def __init__(
+        self,
+        nbits: Optional[int] = 2,
+        q_group_size: Optional[int] = 64,
+        residual_length: Optional[int] = 128,
+    ):
+        self.nbits = nbits
+        self.q_group_size = q_group_size
+        self.residual_length = residual_length
+
+    @classmethod
+    def from_dict(cls, config_dict, **kwargs):
+        """
+        Constructs a WatermarkingConfig instance from a dictionary of parameters.
+        Args:
+            config_dict (Dict[str, Any]): Dictionary containing configuration parameters.
+            **kwargs: Additional keyword arguments to override dictionary values.
+        Returns:
+            WatermarkingConfig: Instance of WatermarkingConfig constructed from the dictionary.
+        """
+        config = cls(**config_dict)
+        to_remove = []
+        for key, value in kwargs.items():
+            if hasattr(config, key):
+                setattr(config, key, value)
+                to_remove.append(key)
+        for key in to_remove:
+            kwargs.pop(key, None)
+        return config
+
+    def to_json_file(self, json_file_path: Union[str, os.PathLike]):
+        """
+        Save this instance to a JSON file.
+        Args:
+            json_file_path (Union[str, os.PathLike]): Path to the JSON file in which this configuration instance's parameters will be saved.
+        """
+        with open(json_file_path, "w", encoding="utf-8") as writer:
+            config_dict = self.to_dict()
+            json_string = json.dumps(config_dict, indent=2, sort_keys=True) + "\n"
+
+            writer.write(json_string)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Serializes this instance to a Python dictionary.
+        Returns:
+            Dict[str, Any]: Dictionary of all the attributes that make up this configuration instance.
+        """
+        output = copy.deepcopy(self.__dict__)
+        return output
+
+    def __iter__(self):
+        for attr, value in copy.deepcopy(self.__dict__).items():
+            yield attr, value
+
+    def __repr__(self):
+        return f"{self.__class__.__name__} {self.to_json_string()}"
+
+    def to_json_string(self):
+        """
+        Serializes this instance to a JSON formatted string.
+        Returns:
+            str: JSON formatted string representing the configuration instance.
+        """
+        return json.dumps(self.__dict__, indent=2) + "\n"
+
+    def update(self, **kwargs):
+        """
+        Update the configuration attributes with new values.
+        Args:
+            **kwargs: Keyword arguments representing configuration attributes and their new values.
+        """
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
+    def validate(self):
+        watermark_missing_arg_msg = (
+            "Some of the keys in `cache_config` are defined incorrectly. `{key}` should be {correct_value}` "
+            "but found {found_value}"
+        )
+        if self.nbits not in [2, 4]:
+            raise ValueError(
+                watermark_missing_arg_msg.format(
+                    key="nbits",
+                    correct_value="2 or 4",
+                    found_value=self.nbits,
+                ),
+            )
+        # need check for q_group_size depending on model type/hidden-dim I guess?

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
-from quanto import QBitsTensor, QTensor, absmax_scale, qint2, qint4, qint8
+from quanto import QBitsTensor, qint2, qint4
 
 from .configuration_utils import PretrainedConfig
 from .utils import logging
@@ -185,33 +185,16 @@ class DynamicCache(Cache):
         return cache
 
 
-def quantize(tensor, n_bits, q_group_size, scale=None):
-    qtype = qint4 if n_bits==4 else qint2
-    qtensor = QBitsTensor.quantize(tensor, axis=0, qtype=qtype, group_size=q_group_size)
-    #qtensor = QTensor.quantize(tensor, qtype=qint4, scale=scale)
-
-    #tensor = tensor.reshape(-1, q_group_size)
-    #max_val = tensor.amax(dim=1)
-    #min_val = tensor.amin(dim=1)
-    #max_int = 2**n_bits - 1
-    #min_int = -(2**n_bits - 1)
-    #scales = (max_val - min_val).clamp(min=1e-5) / max_int
-    #zeros = (-torch.round(min_val / scales)).clamp_(min_int, max_int)
-    #qtensor = torch.quantize_per_channel(
-    #    tensor.to(torch.float32), scales=scales, zero_points=zeros, axis=0, dtype=torch.quint8
-    #)
-    return qtensor
-
-
 class QuantCache(Cache):
-    def __init__(self) -> None:
+    def __init__(self, n_bits: int = 2, q_group_size: int = 64, residual_length: int = 128) -> None:
         self.key_cache: List[torch.Tensor] = []
         self.value_cache: List[torch.Tensor] = []
         self._key_cache_quant: List[torch.Tensor] = []
         self._value_cache_quant: List[torch.Tensor] = []
         self.seen_token = 0
-        self.residual_length = 128
-        self._scale = None
+        self.residual_length = residual_length
+        self.qtype = qint4 if n_bits == 4 else qint2
+        self.q_group_size = q_group_size
 
     def __getitem__(self, layer_idx: int) -> List[Tuple[torch.Tensor]]:
         """
@@ -250,8 +233,8 @@ class QuantCache(Cache):
             self.seen_token += key_states.shape[-2]
 
         if len(self.key_cache) <= layer_idx:
-            self._key_cache_quant.append(quantize(key_states.contiguous(), n_bits=4, q_group_size=64))
-            self._value_cache_quant.append(quantize(value_states.contiguous(), n_bits=4, q_group_size=64))
+            self._key_cache_quant.append(self.quantize(key_states.contiguous()))
+            self._value_cache_quant.append(self.quantize(value_states.contiguous()))
             self.key_cache.append(torch.zeros(0, dtype=key_states.dtype, device=key_states.device))
             self.value_cache.append(torch.zeros(0, dtype=key_states.dtype, device=key_states.device))
             keys_to_return, values_to_return = key_states, value_states
@@ -259,24 +242,27 @@ class QuantCache(Cache):
             dequant_key = self._key_cache_quant[layer_idx].dequantize()
             dequant_value = self._value_cache_quant[layer_idx].dequantize()
             keys_to_return = torch.cat(
-                    [
-                        dequant_key,
-                        self.key_cache[layer_idx],
-                        key_states,
-                    ],
-                    dim=-2,
-                )
+                [
+                    dequant_key,
+                    self.key_cache[layer_idx],
+                    key_states,
+                ],
+                dim=-2,
+            )
             values_to_return = torch.cat(
-                    [
-                        dequant_value,
-                        self.value_cache[layer_idx],
-                        value_states,
-                    ],
-                    dim=-2,
-                )
-            if self.key_cache[layer_idx].dim() == 4 and self.key_cache[layer_idx].shape[-2] + 1 == self.residual_length:            
-                self._key_cache_quant[layer_idx] = quantize(keys_to_return.contiguous(), n_bits=4, q_group_size=64)
-                self._value_cache_quant[layer_idx] = quantize(values_to_return.contiguous(), n_bits=4, q_group_size=64)
+                [
+                    dequant_value,
+                    self.value_cache[layer_idx],
+                    value_states,
+                ],
+                dim=-2,
+            )
+            if (
+                self.key_cache[layer_idx].dim() == 4
+                and self.key_cache[layer_idx].shape[-2] + 1 == self.residual_length
+            ):
+                self._key_cache_quant[layer_idx] = self.quantize(keys_to_return.contiguous())
+                self._value_cache_quant[layer_idx] = self.quantize(values_to_return.contiguous())
                 self.key_cache[layer_idx] = torch.zeros(0, dtype=key_states.dtype, device=key_states.device)
                 self.value_cache[layer_idx] = torch.zeros(0, dtype=key_states.dtype, device=key_states.device)
             else:
@@ -307,6 +293,10 @@ class QuantCache(Cache):
     def from_legacy_cache(cls, past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None) -> "DynamicCache":
         """Converts a cache in the legacy cache format into an equivalent `DynamicCache`."""
         return None
+
+    def quantize(self, tensor):
+        qtensor = QBitsTensor.quantize(tensor, axis=0, qtype=self.qtype, group_size=self.q_group_size)
+        return qtensor
 
 
 class SinkCache(Cache):

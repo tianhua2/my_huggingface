@@ -9,12 +9,11 @@ tokenizer.pad_token_id = tokenizer.eos_token_id
 model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-7b-chat-hf", torch_dtype=torch.float16, attn_implementation="eager").to("cuda:0")
 
 
-
 # ---------------------------------------------------------------------------------LAMBADA -------------------------------------------------------------------------------------------
 
 def calculate_perplexity():
-    #dataset = load_dataset("lambada", split="test")
-    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+    dataset = load_dataset("lambada", split="test")
+    #dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
     encodings = tokenizer("\n\n".join(dataset["text"]), return_tensors="pt")
 
     max_length = model.config.max_position_embeddings
@@ -42,11 +41,12 @@ def calculate_perplexity():
     ppl = torch.exp(torch.stack(nlls).mean())
     print(f"Perplexity: {ppl}")
 
-# Perplexity: 6.09 for DynamicCache, same for quant
+# Perplexity: 6.09 for DynamicCache, same for quant int4 and int2 (wikitext)
+# Preplexity 16.1758 on lambada, same for all
 
 # ---------------------------------------------------------------------------------_MMLU -------------------------------------------------------------------------------------------
 
-def collate_fn(examples):
+def collate_fn_mmlu(examples):
     prompts = []
     for i in range(len(examples['question'])):
         prompt = f"{examples['question'][i].strip()}\nA. {examples['choices'][i][0]}\nB. {examples['choices'][i][1]}\nC. {examples['choices'][i][2]}\nD. {examples['choices'][i][3]}\nAnswer:"
@@ -54,10 +54,55 @@ def collate_fn(examples):
     examples['prompt'] = prompts
     return examples
 
+def collate_fn_arc(examples):
+    prompts = []
+    for i in range(len(examples['question'])):
+        choices_len = len(examples['choices'][i])
+        temp = ""
+        for j in range(choices_len):
+            temp += f"\n{examples['choices'][i]['label'][j]}.{examples['choices'][i]['text'][j]} "
+        prompt = f"{examples['question'][i].strip()}{temp}\nAnswer:"
+        prompts.append(prompt)
+    examples['prompt'] = prompts
+    return examples
+
+
+def calculate_arc():
+    dataset = load_dataset("allenai/ai2_arc", "ARC-Challenge", split="test")
+    dataset = dataset.map(collate_fn_arc, batched=True)
+
+    correct = 0
+    loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
+    for example in tqdm(dataset):
+        input_text = [f'{example["prompt"]} {choice}' for choice in example["choices"]['label']]
+        inputs = tokenizer(input_text, padding=True, return_tensors="pt").to(model.device)
+        prompt_length = len(tokenizer(example["prompt"]).input_ids)
+        target_ids = inputs["input_ids"].clone()
+        target_ids[:, :prompt_length] = -100 # loss only on the choice/answer
+        target_ids[target_ids == 2] = -100
+        with torch.no_grad():
+            outputs = model(**inputs)
+        
+        shift_logits = outputs.logits[..., :-1, :].contiguous()
+        shift_labels = target_ids[..., 1:].contiguous()
+        shift_logits = shift_logits.view(-1, model.config.vocab_size)
+        shift_labels_reshaped = shift_labels.view(-1)
+        loss = loss_fct(shift_logits, shift_labels_reshaped)
+        loss = loss.view(shift_labels.shape).mean(dim=-1)
+
+        label2id = {lbl: idx for idx, lbl in enumerate(example["choices"]["label"])}
+        pred = loss.argmin()
+        gold = label2id[example["answerKey"]]
+        correct += (pred == gold)
+
+    print(f"Accuracy on ARC Challenge {(correct / len(dataset) * 100):.04f}%")
+
+# Acc ARC: 38.31 for all...
+
 
 def calculate_mmlu():
     dataset = load_dataset("cais/mmlu", "all", split="test")
-    dataset = dataset.map(collate_fn, batched=True)
+    dataset = dataset.map(collate_fn_mmlu, batched=True)
 
     correct = 0
     loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
@@ -82,8 +127,8 @@ def calculate_mmlu():
         gold = example["answer"]
         correct += (pred == gold)
 
-    print(f"Accuracy on MMLU {correct / len(dataset) * 100}%")
+    print(f"Accuracy on MMLU {(correct / len(dataset) * 100):.04f}%")
 
-# 41,2% for int4, and same for Dynamic but why the paper says it's 45.3%? 
-# quanto settings: qint4, group_size=32, residual_size=128
-calculate_perplexity()
+# Acc MMLU: 41,2% for int4/int2, and same for Dynamic
+
+calculate_arc()
