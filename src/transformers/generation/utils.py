@@ -2519,7 +2519,7 @@ class GenerationMixin:
         batch_size = input_ids.shape[0]
         this_peer_finished = False
         unfinished_sequences = torch.ones(batch_size, dtype=torch.long, device=input_ids.device)
-        #model_kwargs["cache_position"] = torch.arange(cur_len, device=input_ids.device)
+        #model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
 
         while self._has_unfinished_sequences(this_peer_finished, synced_gpus, device=input_ids.device):
             # prepare model inputs
