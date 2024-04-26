@@ -297,9 +297,6 @@ class SwitchTransformersSparseMLP(nn.Module):
         # can be unchanged from one layer to another. That is why the hidden states are cloned before updating only the seleced ones.
 
         next_states = hidden_states.clone()
-        # for idx, expert in enumerate(self.experts.values()):
-        #     token_indices = router_mask[:, :, idx].bool()
-        #     next_states[token_indices] = expert(hidden_states[token_indices]).to(next_states.dtype)
 
         # Preformance improvement version of Switch Transformer
         # It utilized sparse tensor and only access the activated experts
