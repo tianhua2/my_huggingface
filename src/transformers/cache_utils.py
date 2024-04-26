@@ -2,11 +2,12 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
-from quanto import QBitsTensor, qint2, qint4
 
 from .configuration_utils import PretrainedConfig
-from .utils import logging
+from .utils import is_quanto_available, logging
 
+if is_quanto_available():
+    from quanto import QBitsTensor, qint2, qint4
 
 logger = logging.get_logger(__name__)
 

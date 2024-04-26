@@ -1103,6 +1103,20 @@ class GenerationConfig(PushToHubMixin):
 
 @dataclass
 class CacheConfig:
+    """
+    Configuration class for quantized cache settings.
+
+    Attributes:
+        nbits (`Optional[int]`):
+            Number of bits, cam be 2 or 4. Defaults to 2.
+        q_group_size (`Optional[int]`):
+            Size of the quantization group, should be a divisor of the model's hidden dimension.
+            Defaults to 64.
+        residual_length (`Optional[int]`):
+            Length of the residual cache which will always be stored in full/half presicion.
+            Defaults to 128.
+    """
+
     def __init__(
         self,
         nbits: Optional[int] = 2,
@@ -1116,12 +1130,12 @@ class CacheConfig:
     @classmethod
     def from_dict(cls, config_dict, **kwargs):
         """
-        Constructs a WatermarkingConfig instance from a dictionary of parameters.
+        Constructs a CacheConfig instance from a dictionary of parameters.
         Args:
             config_dict (Dict[str, Any]): Dictionary containing configuration parameters.
             **kwargs: Additional keyword arguments to override dictionary values.
         Returns:
-            WatermarkingConfig: Instance of WatermarkingConfig constructed from the dictionary.
+            CacheConfig: Instance of CacheConfig constructed from the dictionary.
         """
         config = cls(**config_dict)
         to_remove = []
@@ -1180,16 +1194,31 @@ class CacheConfig:
                 setattr(self, key, value)
 
     def validate(self):
-        watermark_missing_arg_msg = (
+        incorrect_arg_msg = (
             "Some of the keys in `cache_config` are defined incorrectly. `{key}` should be {correct_value}` "
             "but found {found_value}"
         )
         if self.nbits not in [2, 4]:
             raise ValueError(
-                watermark_missing_arg_msg.format(
+                incorrect_arg_msg.format(
                     key="nbits",
                     correct_value="2 or 4",
                     found_value=self.nbits,
                 ),
             )
-        # need check for q_group_size depending on model type/hidden-dim I guess?
+        if self.q_group_size < 0:
+            raise ValueError(
+                incorrect_arg_msg.format(
+                    key="q_group_size",
+                    correct_value="a positive integer",
+                    found_value=self.q_group_size,
+                ),
+            )
+        if self.residual_length < 0:
+            raise ValueError(
+                incorrect_arg_msg.format(
+                    key="residual_length",
+                    correct_value="a positive integer",
+                    found_value=self.residual_length,
+                ),
+            )
