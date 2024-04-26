@@ -6,6 +6,7 @@ import torch
 from .configuration_utils import PretrainedConfig
 from .utils import is_quanto_available, logging
 
+
 if is_quanto_available():
     from quanto import QBitsTensor, qint2, qint4
 
