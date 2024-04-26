@@ -1527,11 +1527,17 @@ class GenerationMixin:
                     )
                 self._setup_cache(cache_cls, max_batch_size=batch_size, max_cache_len=generation_config.max_length)
             elif generation_config.cache_implementation == "quantized":
-                model_kwargs["past_key_values"] = QuantCache(
-                    n_bits=cache_config.nbits,
-                    q_group_size=cache_config.q_group_size,
-                    residual_length=cache_config.residual_length,
-                )
+                if model_kwargs.get("past_key_values") is not None:
+                    if not isinstance(model_kwargs["past_key_values"], QuantCache):
+                        raise ValueError(
+                            "Setting `QuantCache` and passing another type of `past_key_values` is not implemented. Either pass `QuantCache` type or do not pass `past_key_values`"
+                        )
+                else:
+                    model_kwargs["past_key_values"] = QuantCache(
+                        n_bits=cache_config.nbits,
+                        q_group_size=cache_config.q_group_size,
+                        residual_length=cache_config.residual_length,
+                    )
 
         self._validate_generated_length(generation_config, input_ids_length, has_default_max_length)
 
@@ -1849,7 +1855,7 @@ class GenerationMixin:
                 **model_kwargs,
             )
 
-        if generation_config.cache_implementation in NEED_SETUP_CACHE_CLASSES_MAPPING:
+        if generation_config.cache_implementation == "static":
             if not callable(getattr(self, "_reset_cache", None)):
                 raise ValueError(
                     "A `static_cache` was used to generate but there was a failure when trying to  release the cache. "
@@ -2519,7 +2525,7 @@ class GenerationMixin:
         batch_size = input_ids.shape[0]
         this_peer_finished = False
         unfinished_sequences = torch.ones(batch_size, dtype=torch.long, device=input_ids.device)
-        #model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
+        model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
 
         while self._has_unfinished_sequences(this_peer_finished, synced_gpus, device=input_ids.device):
             # prepare model inputs

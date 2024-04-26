@@ -975,10 +975,10 @@ class LlamaModel(LlamaPreTrainedModel):
 
         past_seen_tokens = 0
         if use_cache:  # kept for BC (cache positions)
-            if not isinstance(past_key_values, StaticCache):
-                past_key_values = DynamicCache.from_legacy_cache(past_key_values)
+            if isinstance(past_key_values, QuantCache):
                 past_seen_tokens = past_key_values.get_seq_length()
-            elif isinstance(past_key_values, QuantCache):
+            elif not isinstance(past_key_values, StaticCache):
+                past_key_values = DynamicCache.from_legacy_cache(past_key_values)
                 past_seen_tokens = past_key_values.get_seq_length()
 
         if cache_position is None:

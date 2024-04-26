@@ -41,7 +41,9 @@ def update_model_kwargs(model_kwargs, model_output):
 dataset = load_dataset('THUDM/LongBench', "samsum", split='test')
 dataset = dataset.map(collate_fn, batched=False)
 
-
+# messed up here rn, but was working when I ran eval before code clean-up
+# rn we do not support quant cache when simple forwarding 
+# better run the generate as whole, without this prefill stage
 @torch.no_grad()
 def prefill(inputs):
     outputs = model(**inputs, use_cache=True)
@@ -83,10 +85,10 @@ def eval_generated_lengths(cache):
     memory_avg, tokens_per_sec_avg = [], []
     time_to_first_token_avg = []
     TTFT, TIME_PER_DECODING = [], []
-    #xs = [500, 1000, 4000, 10_000]
-    bs = [1, 20, 50, 100, 300]
+    xs = [500, 1000, 4000, 10_000]
+    #bs = [1, 20, 50, 100, 300]
     gen_length = 500
-    for batch_size in bs:
+    for gen_length in xs:
         with TorchTracemalloc() as tt:
             for batch in range(num_batches):
                 start = perf_counter()
@@ -98,7 +100,7 @@ def eval_generated_lengths(cache):
                 next_model_kwargs.pop("input_ids")
 
                 torch.cuda.synchronize()
-                out, _ = model.generate(next_input_ids, **next_model_kwargs, min_new_tokens=gen_length-1, max_new_tokens=gen_length, **generate_kwargs)
+                out = model.generate(next_input_ids, **next_model_kwargs, min_new_tokens=gen_length-1, max_new_tokens=gen_length, **generate_kwargs)
                 TIME_PER_DECODING.append((perf_counter() - start - TTFT[-1]) / batch_size / gen_length)
 
                 del out
@@ -111,7 +113,7 @@ def eval_generated_lengths(cache):
 
     save_bar_chart(
          title="Memory consumption for different batch sizes",
-         x=bs,
+         x=xs,
          y=memory_avg,
          ylabel="Batch size",
          xlabel="GPU Memory comsumption in MiB",
@@ -121,4 +123,51 @@ def eval_generated_lengths(cache):
     print(f"time_to_first_token_avg - one per condition: {tokens_per_sec_avg}")
 
 
-eval_generated_lengths(cache="quantized")
+# correct version for reproducibility
+def eval_generated_lengths_no_prefill(cache):
+    batch_size = 1
+    num_batches = 5 # NOTE: 200 samples total only in dataset
+
+    generate_kwargs = {"do_sample": False, "temperature": 1.0, "top_p": 1.0}
+    if cache == "quantized":
+        generate_kwargs["cache_implementation"] = "quantized"
+
+    # warm up
+    for _ in range(3):
+        inputs_warmup = tokenizer(["Today a dragon flew over Paris"] * 2, return_tensors="pt").to(model.device)
+        model.generate(**inputs_warmup, max_new_tokens=20, **generate_kwargs)
+
+    memory_avg, tokens_per_sec_avg = [], []
+    TIME_PER_DECODING = []
+    #xs = [500, 1000, 4000, 10_000]
+    bs = [1, 20, 50, 100, 300]
+    gen_length = 500
+    for batch_size in bs:
+        with TorchTracemalloc() as tt:
+            for batch in range(num_batches):
+                start = perf_counter()
+                torch.cuda.synchronize()
+                curr_chunk = dataset[batch: batch+batch_size]
+                inputs = tokenizer(curr_chunk['prompt'], padding=True, max_length=100, truncation=True, return_tensors="pt").to(model.device)
+                out = model.generate(**inputs, min_new_tokens=gen_length-1, max_new_tokens=gen_length, **generate_kwargs)
+                TIME_PER_DECODING.append((perf_counter() - start) / batch_size / gen_length)
+
+                del out
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+
+        memory_avg.append(TorchTracemalloc.track_memory_consumption[-1])
+        tokens_per_sec_avg.append(1 / (sum(TIME_PER_DECODING) / len(TIME_PER_DECODING)))
+
+    save_bar_chart(
+         title="Memory consumption for different batch sizes",
+         x=bs,
+         y=memory_avg,
+         ylabel="Batch size",
+         xlabel="GPU Memory comsumption in MiB",
+         save_path="memory_int4.png",
+        )
+    print(f"tokens_per_sec_avg - one per condition: {tokens_per_sec_avg}")
+
+
+eval_generated_lengths_no_prefill(cache="quantized")
