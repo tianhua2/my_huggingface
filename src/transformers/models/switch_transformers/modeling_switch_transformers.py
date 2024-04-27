@@ -12,8 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" PyTorch SwitchTransformers model."""
-
+"""PyTorch SwitchTransformers model."""
 
 import copy
 import math
@@ -300,16 +299,19 @@ class SwitchTransformersSparseMLP(nn.Module):
 
         # Preformance improvement version of Switch Transformer
         # It utilized sparse tensor and only access the activated experts
-        # This significantly reduces latency proprotional to the number of experts. 
+        # This significantly reduces latency proprotional to the number of experts.
         router_mask = router_mask.bool()
-        idx_mask = router_mask.transpose(1,2)
+        idx_mask = router_mask.transpose(1, 2)
         idx_mask = torch.cat(torch.split(idx_mask, 1, dim=0), dim=2)
         idx_mask = idx_mask.sum(dim=2)
-        idx_mask = idx_mask.squeeze()   # length: number of experts / value: number of tokens 
-        idx_mask = torch.nonzero(idx_mask, as_tuple=True)[0].tolist()   # length: number of "activated" expert / value: index
+        idx_mask = idx_mask.squeeze()  # length: number of experts / value: number of tokens
+        idx_mask = torch.nonzero(idx_mask, as_tuple=True)[
+            0
+        ].tolist()  # length: number of "activated" expert / value: index
         for idx in idx_mask:
-            next_states[router_mask[:, :, idx]] = getattr(self.experts, "expert_{}".format(idx)) \
-                (hidden_states[router_mask[:, :, idx]])
+            next_states[router_mask[:, :, idx]] = getattr(self.experts, "expert_{}".format(idx))(
+                hidden_states[router_mask[:, :, idx]]
+            )
 
         hidden_states = router_probs * next_states
         return hidden_states, (router_logits, expert_index)
