@@ -43,6 +43,7 @@ from .candidate_generator import (
     PromptLookupCandidateGenerator,
     _crop_past_key_values,
     _prepare_attention_mask,
+    _prepare_position_ids,
     _prepare_token_type_ids,
 )
 from .configuration_utils import GenerationConfig, GenerationMode
@@ -673,6 +674,10 @@ class GenerationMixin:
 
         if "cache_position" in model_kwargs and model_kwargs["cache_position"] is not None:
             model_kwargs["cache_position"] = model_kwargs["cache_position"][-1:] + num_new_tokens
+
+        if "position_ids" in model_kwargs and model_kwargs["position_ids"] is not None:
+            position_ids = model_kwargs["position_ids"]
+            model_kwargs["position_ids"] = torch.cat([position_ids, position_ids[:, -1:] + 1], dim=-1)
 
         return model_kwargs
 
@@ -4685,6 +4690,7 @@ class GenerationMixin:
             candidate_kwargs = _prepare_attention_mask(
                 candidate_kwargs, candidate_input_ids.shape[1], self.config.is_encoder_decoder
             )
+            candidate_kwargs = _prepare_position_ids(candidate_kwargs, candidate_input_ids.shape[1])
             candidate_kwargs = _prepare_token_type_ids(candidate_kwargs, candidate_input_ids.shape[1])
             if "cache_position" in candidate_kwargs:
                 candidate_kwargs["cache_position"] = torch.cat(

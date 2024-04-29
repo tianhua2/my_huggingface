@@ -455,7 +455,8 @@ class CodeGenModel(CodeGenPreTrainedModel):
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
-        device = input_ids.device if input_ids is not None else inputs_embeds.device
+        if inputs_embeds is None:
+            inputs_embeds = self.wte(input_ids)
 
         if token_type_ids is not None:
             token_type_ids = token_type_ids.view(-1, input_shape[-1])
@@ -467,8 +468,9 @@ class CodeGenModel(CodeGenPreTrainedModel):
             past_length = past_key_values[0][0].size(-2)
 
         if position_ids is None:
-            position_ids = torch.arange(past_length, input_shape[-1] + past_length, dtype=torch.long, device=device)
-            position_ids = position_ids.unsqueeze(0)
+            position_ids = self.get_position_ids_from_attention_mask(
+                attention_mask, past_length, seq_length=inputs_embeds.shape[1], device=inputs_embeds.device
+            )
 
         # Attention mask.
         if attention_mask is not None:
@@ -495,9 +497,6 @@ class CodeGenModel(CodeGenPreTrainedModel):
         # attention_probs has shape bsz x num_attention_heads x N x N
         # head_mask has shape n_layer x batch x num_attention_heads x N x N
         head_mask = self.get_head_mask(head_mask, self.config.n_layer)
-
-        if inputs_embeds is None:
-            inputs_embeds = self.wte(input_ids)
 
         hidden_states = inputs_embeds
 
@@ -597,6 +596,7 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
     def prepare_inputs_for_generation(self, input_ids, inputs_embeds=None, past_key_values=None, **kwargs):
         token_type_ids = kwargs.get("token_type_ids", None)
         # Omit tokens covered by past_key_values
+        past_length = 0
         if past_key_values:
             past_length = past_key_values[0][0].shape[2]
 
@@ -614,12 +614,16 @@ class CodeGenForCausalLM(CodeGenPreTrainedModel):
         attention_mask = kwargs.get("attention_mask", None)
         position_ids = kwargs.get("position_ids", None)
 
-        if attention_mask is not None and position_ids is None:
-            # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill_(attention_mask == 0, 1)
-            if past_key_values:
-                position_ids = position_ids[:, -input_ids.shape[1] :]
+        seq_length = (
+            inputs_embeds.shape[1] if inputs_embeds is not None and past_key_values is None else input_ids.shape[1]
+        )
+        if position_ids is None:
+            device = input_ids.device if input_ids is not None else inputs_embeds.device
+            position_ids = self.get_position_ids_from_attention_mask(
+                attention_mask, past_length, seq_length=seq_length, device=device
+            )
+        else:
+            position_ids = position_ids[:, -seq_length:]
 
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
         if inputs_embeds is not None and past_key_values is None:

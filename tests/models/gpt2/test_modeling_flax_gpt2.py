@@ -158,6 +158,9 @@ class FlaxGPT2ModelTester:
         max_decoder_length = 20
         model = model_class_name(config)
 
+        # make full attn mask since below we are preparing position ids assuming it's all ones
+        attention_mask = jnp.ones_like(attention_mask)
+
         attention_mask_cache = jnp.concatenate(
             [attention_mask, jnp.zeros((attention_mask.shape[0], max_decoder_length - attention_mask.shape[1]))],
             axis=-1,
@@ -280,6 +283,7 @@ class FlaxGPT2ModelTest(FlaxModelTesterMixin, FlaxGenerationTesterMixin, unittes
                     pt_inputs["attention_mask"][batch_idx, start_index:] = 1
                     prepared_inputs_dict["attention_mask"][batch_idx, :start_index] = 0
                     prepared_inputs_dict["attention_mask"][batch_idx, start_index:] = 1
+
                 pt_model = pt_model_class(config).eval()
                 fx_model = model_class(config, dtype=jnp.float32)
 

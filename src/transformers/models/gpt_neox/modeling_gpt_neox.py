@@ -850,6 +850,8 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
         batch_size, seq_length = input_shape
+        if inputs_embeds is None:
+            inputs_embeds = self.embed_in(input_ids)
 
         if past_key_values is None:
             past_length = 0
@@ -858,9 +860,9 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
             past_length = past_key_values[0][0].size(-2)
 
         if position_ids is None:
-            device = input_ids.device if input_ids is not None else inputs_embeds.device
-            position_ids = torch.arange(past_length, seq_length + past_length, dtype=torch.long, device=device)
-            position_ids = position_ids.unsqueeze(0)
+            position_ids = self.get_position_ids_from_attention_mask(
+                attention_mask, past_length, seq_length=seq_length, device=inputs_embeds.device
+            )
 
         # Attention mask.
         if attention_mask is not None:
@@ -890,10 +892,6 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
         # input head_mask has shape [num_heads] or [num_hidden_layers x num_heads]
         # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
-
-        if inputs_embeds is None:
-            inputs_embeds = self.embed_in(input_ids)
-
         hidden_states = self.emb_dropout(inputs_embeds)
 
         if self.gradient_checkpointing and self.training:
@@ -1074,6 +1072,7 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
     ):
         input_shape = input_ids.shape
         # cut decoder_input_ids if past is used
+        past_length = 0
         if past_key_values is not None:
             past_length = past_key_values[0][0].shape[2]
 
@@ -1087,12 +1086,16 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
             input_ids = input_ids[:, remove_prefix_length:]
 
         position_ids = kwargs.get("position_ids", None)
-        if attention_mask is not None and position_ids is None:
-            # create position_ids on the fly for batch generation
-            position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill_(attention_mask == 0, 1)
-            if past_key_values:
-                position_ids = position_ids[:, -input_ids.shape[1] :]
+        seq_length = (
+            inputs_embeds.shape[1] if inputs_embeds is not None and past_key_values is None else input_ids.shape[1]
+        )
+        if position_ids is None:
+            device = input_ids.device if input_ids is not None else inputs_embeds.device
+            position_ids = self.get_position_ids_from_attention_mask(
+                attention_mask, past_length, seq_length=seq_length, device=device
+            )
+        else:
+            position_ids = position_ids[:, -seq_length:]
 
         # if model is used as a decoder in encoder-decoder model, the decoder attention mask is created on the fly
         if attention_mask is None:

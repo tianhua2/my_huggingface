@@ -1091,9 +1091,9 @@ class GenerationTesterMixin:
             )
             self.assertListEqual(low_output.tolist(), high_output.tolist())
 
-    @parameterized.expand([("random",), ("same",)])
+    @parameterized.expand([("random", True), ("same", True), ("random", False), ("same", False)])
     @is_flaky()  # Read NOTE (1) below. If there are API issues, all attempts will fail.
-    def test_assisted_decoding_matches_greedy_search(self, assistant_type):
+    def test_assisted_decoding_matches_greedy_search(self, assistant_type, use_position_ids):
         # This test ensures that the assisted generation does not introduce output changes over greedy search.
         # NOTE (1): The sentence above is true most of the time, there is a tiny difference in the logits due to matmul
         # shape differences -- and it may result in a different output. The input shape difference happens in the
@@ -1150,7 +1150,6 @@ class GenerationTesterMixin:
                 "output_attentions": True,
                 "return_dict_in_generate": True,
             }
-            output_greedy = model.generate(input_ids, attention_mask=attention_mask, **generation_kwargs)
 
             # test with the same assistant model or randomly init one
             # in the first case all candidate tokens are accepted, in the second none is accepted
@@ -1161,8 +1160,31 @@ class GenerationTesterMixin:
                 assistant_model = model
             assistant_model.generation_config.num_assistant_tokens = 2  # see b)
             assistant_model.generation_config.num_assistant_tokens_schedule = "constant"  # see b)
-            generation_kwargs.update({"assistant_model": assistant_model})
-            output_assisted = model.generate(input_ids, attention_mask=attention_mask, **generation_kwargs)
+
+            # test that the output is correct if user pass in position ids into `generate` vs it's calculated internally
+            if use_position_ids:
+                model_forward_args = inspect.signature(model.forward).parameters
+                if "position_ids" not in model_forward_args:
+                    self.skipTest("This model doesn't use `position_ids`")
+
+                position_ids = model.get_position_ids_from_attention_mask(
+                    attention_mask, past_length=0, seq_length=input_ids.shape[-1], device=input_ids.device
+                )
+                output_greedy = model.generate(
+                    input_ids, attention_mask=attention_mask, position_ids=position_ids, **generation_kwargs
+                )
+                output_assisted = model.generate(
+                    input_ids,
+                    attention_mask=attention_mask,
+                    position_ids=position_ids,
+                    assistant_model=assistant_model,
+                    **generation_kwargs,
+                )
+            else:
+                output_greedy = model.generate(input_ids, attention_mask=attention_mask, **generation_kwargs)
+                output_assisted = model.generate(
+                    input_ids, attention_mask=attention_mask, assistant_model=assistant_model, **generation_kwargs
+                )
 
             # The two outputs must match and their shape must be as expected
             self.assertListEqual(output_greedy.sequences.tolist(), output_assisted.sequences.tolist())
@@ -1586,6 +1608,56 @@ class GenerationTesterMixin:
                             outputs_cached.past_key_values[layer_idx][kv_idx],
                         )
                     )
+
+    def test_generate_with_and_without_position_ids(self):
+        for model_class in self.all_generative_model_classes:
+            config, input_ids, attention_mask = self._get_input_ids_and_config()
+            model = model_class(config).to(torch_device).eval()
+            model_forward_args = inspect.signature(model.forward).parameters
+            if "position_ids" not in model_forward_args:
+                self.skipTest("This model doesn't use `position_ids`")
+
+            out_wo_positions = model.generate(input_ids, attention_mask=attention_mask, max_new_tokens=5)
+
+            # infer position ids from attn mask and generate again
+            position_ids = model.get_position_ids_from_attention_mask(
+                attention_mask, past_length=0, seq_length=input_ids.shape[-1], device=input_ids.device
+            )
+            out_w_positions = model.generate(
+                input_ids, attention_mask=attention_mask, position_ids=position_ids, max_new_tokens=5
+            )
+
+            # The two sets of generated sequences must match, if generate can infer position ids correctly
+            # and can continue adding new ids to the already passed position ids
+            self.assertListEqual(out_wo_positions.tolist(), out_w_positions.tolist())
+
+    def test_generate_with_and_without_position_ids_inputs_embeds(self):
+        for model_class in self.all_generative_model_classes:
+            config, input_ids, attention_mask = self._get_input_ids_and_config()
+            model = model_class(config).to(torch_device).eval()
+            model_forward_args = inspect.signature(model.forward).parameters
+            if "position_ids" not in model_forward_args:
+                self.skipTest("This model doesn't use `position_ids`")
+
+            if "inputs_embeds" not in inspect.signature(model.prepare_inputs_for_generation).parameters.keys():
+                self.skipTest("This model doesn't use `inputs_embeds`")
+
+            inputs_embeds = model.get_input_embeddings()(input_ids)
+            out_wo_positions = model.generate(
+                inputs_embeds=inputs_embeds, attention_mask=attention_mask, max_new_tokens=5
+            )
+
+            # infer position ids from attn mask and generate again
+            position_ids = model.get_position_ids_from_attention_mask(
+                attention_mask, past_length=0, seq_length=input_ids.shape[-1], device=input_ids.device
+            )
+            out_w_positions = model.generate(
+                inputs_embeds=inputs_embeds, attention_mask=attention_mask, position_ids=position_ids, max_new_tokens=5
+            )
+
+            # The two sets of generated sequences must match, if generate can infer position ids correctly
+            # and can continue adding new ids to the already passed position ids
+            self.assertListEqual(out_wo_positions.tolist(), out_w_positions.tolist())
 
     @parameterized.expand([(1, False), (1, True), (4, False)])
     def test_new_cache_format(self, num_beams, do_sample):
