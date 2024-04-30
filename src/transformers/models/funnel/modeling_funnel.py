@@ -41,6 +41,7 @@ from ...utils import (
     logging,
     replace_return_docstrings,
 )
+from ...utils.import_utils import register
 from .configuration_funnel import FunnelConfig
 
 
@@ -53,6 +54,7 @@ _CHECKPOINT_FOR_DOC = "funnel-transformer/small"
 INF = 1e6
 
 
+@register()
 def load_tf_weights_in_funnel(model, config, tf_checkpoint_path):
     """Load tf checkpoints in a pytorch model."""
     try:
@@ -768,6 +770,7 @@ class FunnelDiscriminatorPredictions(nn.Module):
         return logits
 
 
+@register(backends=("torch",))
 class FunnelPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
@@ -911,6 +914,7 @@ FUNNEL_INPUTS_DOCSTRING = r"""
     """,
     FUNNEL_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class FunnelBaseModel(FunnelPreTrainedModel):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__(config)
@@ -988,6 +992,7 @@ class FunnelBaseModel(FunnelPreTrainedModel):
     "The bare Funnel Transformer Model transformer outputting raw hidden-states without any specific head on top.",
     FUNNEL_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class FunnelModel(FunnelPreTrainedModel):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__(config)
@@ -1096,6 +1101,7 @@ add_start_docstrings(
 )
 
 
+@register(backends=("torch",))
 class FunnelForPreTraining(FunnelPreTrainedModel):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__(config)
@@ -1179,6 +1185,7 @@ class FunnelForPreTraining(FunnelPreTrainedModel):
 
 
 @add_start_docstrings("""Funnel Transformer Model with a `language modeling` head on top.""", FUNNEL_START_DOCSTRING)
+@register(backends=("torch",))
 class FunnelForMaskedLM(FunnelPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
@@ -1260,6 +1267,7 @@ class FunnelForMaskedLM(FunnelPreTrainedModel):
     """,
     FUNNEL_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class FunnelForSequenceClassification(FunnelPreTrainedModel):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__(config)
@@ -1352,6 +1360,7 @@ class FunnelForSequenceClassification(FunnelPreTrainedModel):
     """,
     FUNNEL_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class FunnelForMultipleChoice(FunnelPreTrainedModel):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__(config)
@@ -1435,6 +1444,7 @@ class FunnelForMultipleChoice(FunnelPreTrainedModel):
     """,
     FUNNEL_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class FunnelForTokenClassification(FunnelPreTrainedModel):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__(config)
@@ -1508,6 +1518,7 @@ class FunnelForTokenClassification(FunnelPreTrainedModel):
     """,
     FUNNEL_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class FunnelForQuestionAnswering(FunnelPreTrainedModel):
     def __init__(self, config: FunnelConfig) -> None:
         super().__init__(config)
@@ -1594,3 +1605,16 @@ class FunnelForQuestionAnswering(FunnelPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+
+__all__ = [
+    "load_tf_weights_in_funnel",
+    "FunnelPreTrainedModel",
+    "FunnelBaseModel",
+    "FunnelModel",
+    "FunnelForPreTraining",
+    "FunnelForMaskedLM",
+    "FunnelForSequenceClassification",
+    "FunnelForMultipleChoice",
+    "FunnelForTokenClassification",
+    "FunnelForQuestionAnswering"
+]

@@ -19,6 +19,7 @@ import operator
 
 from ...configuration_utils import PretrainedConfig
 from ...utils import logging
+from ...utils.import_utils import register
 
 
 logger = logging.get_logger(__name__)
@@ -29,6 +30,7 @@ SPEECHT5_PRETRAINED_HIFIGAN_CONFIG_ARCHIVE_MAP = {
 }
 
 
+@register()
 class SpeechT5Config(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`SpeechT5Model`]. It is used to instantiate a
@@ -342,6 +344,7 @@ class SpeechT5Config(PretrainedConfig):
         return functools.reduce(operator.mul, self.conv_stride, 1)
 
 
+@register()
 class SpeechT5HifiGanConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`SpeechT5HifiGanModel`]. It is used to instantiate
@@ -422,3 +425,8 @@ class SpeechT5HifiGanConfig(PretrainedConfig):
         self.leaky_relu_slope = leaky_relu_slope
         self.normalize_before = normalize_before
         super().__init__(**kwargs)
+
+__all__ = [
+    "SpeechT5Config",
+    "SpeechT5HifiGanConfig"
+]

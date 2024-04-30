@@ -16,6 +16,7 @@
 
 from ...configuration_utils import PretrainedConfig
 from ...utils import logging
+from ...utils.import_utils import register
 
 
 logger = logging.get_logger(__name__)
@@ -25,6 +26,7 @@ QWEN2MOE_PRETRAINED_CONFIG_ARCHIVE_MAP = {
 }
 
 
+@register()
 class Qwen2MoeConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`Qwen2MoeModel`]. It is used to instantiate a
@@ -173,3 +175,7 @@ class Qwen2MoeConfig(PretrainedConfig):
             tie_word_embeddings=tie_word_embeddings,
             **kwargs,
         )
+
+__all__ = [
+    "Qwen2MoeConfig"
+]

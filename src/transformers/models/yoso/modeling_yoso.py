@@ -43,6 +43,7 @@ from ...utils import (
     is_torch_cuda_available,
     logging,
 )
+from ...utils.import_utils import register
 from .configuration_yoso import YosoConfig
 
 
@@ -641,6 +642,7 @@ class YosoOnlyMLMHead(nn.Module):
         return prediction_scores
 
 
+@register(backends=("torch",))
 class YosoPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
@@ -733,6 +735,7 @@ YOSO_INPUTS_DOCSTRING = r"""
     "The bare YOSO Model transformer outputting raw hidden-states without any specific head on top.",
     YOSO_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class YosoModel(YosoPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -841,6 +844,7 @@ class YosoModel(YosoPreTrainedModel):
 
 
 @add_start_docstrings("""YOSO Model with a `language modeling` head on top.""", YOSO_START_DOCSTRING)
+@register(backends=("torch",))
 class YosoForMaskedLM(YosoPreTrainedModel):
     _tied_weights_keys = ["cls.predictions.decoder.weight", "cls.predictions.decoder.bias"]
 
@@ -944,6 +948,7 @@ class YosoClassificationHead(nn.Module):
     the pooled output) e.g. for GLUE tasks.""",
     YOSO_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class YosoForSequenceClassification(YosoPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1035,6 +1040,7 @@ class YosoForSequenceClassification(YosoPreTrainedModel):
     the pooled output and a softmax) e.g. for RocStories/SWAG tasks.""",
     YOSO_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class YosoForMultipleChoice(YosoPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1126,6 +1132,7 @@ class YosoForMultipleChoice(YosoPreTrainedModel):
     the hidden-states output) e.g. for Named-Entity-Recognition (NER) tasks.""",
     YOSO_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class YosoForTokenClassification(YosoPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1211,6 +1218,7 @@ class YosoForTokenClassification(YosoPreTrainedModel):
     layers on top of the hidden-states output to compute `span start logits` and `span end logits`).""",
     YOSO_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class YosoForQuestionAnswering(YosoPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1303,3 +1311,13 @@ class YosoForQuestionAnswering(YosoPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+
+__all__ = [
+    "YosoPreTrainedModel",
+    "YosoModel",
+    "YosoForMaskedLM",
+    "YosoForSequenceClassification",
+    "YosoForMultipleChoice",
+    "YosoForTokenClassification",
+    "YosoForQuestionAnswering"
+]

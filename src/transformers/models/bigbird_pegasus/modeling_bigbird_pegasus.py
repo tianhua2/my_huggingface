@@ -44,6 +44,7 @@ from ...utils import (
     logging,
     replace_return_docstrings,
 )
+from ...utils.import_utils import register
 from .configuration_bigbird_pegasus import BigBirdPegasusConfig
 
 
@@ -1552,6 +1553,7 @@ class BigBirdPegasusClassificationHead(nn.Module):
         return hidden_states
 
 
+@register(backends=("torch",))
 class BigBirdPegasusPreTrainedModel(PreTrainedModel):
     config_class = BigBirdPegasusConfig
     base_model_prefix = "model"
@@ -2282,6 +2284,7 @@ class BigBirdPegasusDecoder(BigBirdPegasusPreTrainedModel):
     "The bare BigBirdPegasus Model outputting raw hidden-states without any specific head on top.",
     BIGBIRD_PEGASUS_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -2417,6 +2420,7 @@ class BigBirdPegasusModel(BigBirdPegasusPreTrainedModel):
     BIGBIRD_PEGASUS_START_DOCSTRING,
 )
 # Copied from transformers.models.bart.modeling_bart.BartForConditionalGeneration with Bart->BigBirdPegasus, BART->BIGBIRD_PEGASUS
+@register(backends=("torch",))
 class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
     base_model_prefix = "model"
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
@@ -2602,6 +2606,7 @@ class BigBirdPegasusForConditionalGeneration(BigBirdPegasusPreTrainedModel):
     """,
     BIGBIRD_PEGASUS_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class BigBirdPegasusForSequenceClassification(BigBirdPegasusPreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -2731,6 +2736,7 @@ class BigBirdPegasusForSequenceClassification(BigBirdPegasusPreTrainedModel):
     """,
     BIGBIRD_PEGASUS_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class BigBirdPegasusForQuestionAnswering(BigBirdPegasusPreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -2863,6 +2869,7 @@ class BigBirdPegasusDecoderWrapper(BigBirdPegasusPreTrainedModel):
         return self.decoder(*args, **kwargs)
 
 
+@register(backends=("torch",))
 class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
@@ -3064,3 +3071,12 @@ class BigBirdPegasusForCausalLM(BigBirdPegasusPreTrainedModel):
                 tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past),
             )
         return reordered_past
+
+__all__ = [
+    "BigBirdPegasusPreTrainedModel",
+    "BigBirdPegasusModel",
+    "BigBirdPegasusForConditionalGeneration",
+    "BigBirdPegasusForSequenceClassification",
+    "BigBirdPegasusForQuestionAnswering",
+    "BigBirdPegasusForCausalLM"
+]

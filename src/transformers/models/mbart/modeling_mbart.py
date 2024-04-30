@@ -45,6 +45,7 @@ from ...utils import (
     logging,
     replace_return_docstrings,
 )
+from ...utils.import_utils import register
 from .configuration_mbart import MBartConfig
 
 
@@ -718,6 +719,7 @@ class MBartClassificationHead(nn.Module):
         return hidden_states
 
 
+@register(backends=("torch",))
 class MBartPreTrainedModel(PreTrainedModel):
     config_class = MBartConfig
     base_model_prefix = "model"
@@ -1352,6 +1354,7 @@ class MBartDecoder(MBartPreTrainedModel):
     "The bare MBART Model outputting raw hidden-states without any specific head on top.",
     MBART_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class MBartModel(MBartPreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -1476,6 +1479,7 @@ class MBartModel(MBartPreTrainedModel):
     "The MBART Model with a language modeling head. Can be used for summarization, after fine-tuning the pretrained models.",
     MBART_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class MBartForConditionalGeneration(MBartPreTrainedModel):
     base_model_prefix = "model"
     _keys_to_ignore_on_load_missing = ["final_logits_bias"]
@@ -1655,6 +1659,7 @@ class MBartForConditionalGeneration(MBartPreTrainedModel):
     """,
     MBART_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class MBartForSequenceClassification(MBartPreTrainedModel):
     _tied_weights_keys = ["model.encoder.embed_tokens.weight", "model.decoder.embed_tokens.weight"]
 
@@ -1784,6 +1789,7 @@ class MBartForSequenceClassification(MBartPreTrainedModel):
     """,
     MBART_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class MBartForQuestionAnswering(MBartPreTrainedModel):
     _tied_weights_keys = ["model.encoder.embed_tokens.weight", "model.decoder.embed_tokens.weight"]
 
@@ -1917,6 +1923,7 @@ class MBartDecoderWrapper(MBartPreTrainedModel):
 
 
 # Copied from transformers.models.bart.modeling_bart.BartForCausalLM with Bart->MBart, facebook/bart-base->facebook/mbart-large-cc25
+@register(backends=("torch",))
 class MBartForCausalLM(MBartPreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
@@ -2129,3 +2136,12 @@ class MBartForCausalLM(MBartPreTrainedModel):
                 tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past),
             )
         return reordered_past
+
+__all__ = [
+    "MBartPreTrainedModel",
+    "MBartModel",
+    "MBartForConditionalGeneration",
+    "MBartForSequenceClassification",
+    "MBartForQuestionAnswering",
+    "MBartForCausalLM"
+]
