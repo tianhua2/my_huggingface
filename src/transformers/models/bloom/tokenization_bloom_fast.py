@@ -21,6 +21,7 @@ from typing import Optional, Tuple
 from ...tokenization_utils_base import BatchEncoding
 from ...tokenization_utils_fast import PreTrainedTokenizerFast
 from ...utils import logging
+from ...utils.import_utils import register
 
 
 logger = logging.get_logger(__name__)
@@ -28,6 +29,7 @@ logger = logging.get_logger(__name__)
 VOCAB_FILES_NAMES = {"tokenizer_file": "tokenizer.json"}
 
 
+@register(backends=("tokenizers",))
 class BloomTokenizerFast(PreTrainedTokenizerFast):
     """
     Construct a "fast" Bloom tokenizer (backed by HuggingFace's *tokenizers* library). Based on byte-level
@@ -163,3 +165,7 @@ class BloomTokenizerFast(PreTrainedTokenizerFast):
             "then to ensure that this model continues working without issues."
         )
         return "{% for message in messages %}" "{{ message.content }}{{ eos_token }}" "{% endfor %}"
+
+__all__ = [
+    "BloomTokenizerFast"
+]

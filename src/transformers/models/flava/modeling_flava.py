@@ -35,6 +35,7 @@ from ...utils import (
     logging,
     replace_return_docstrings,
 )
+from ...utils.import_utils import register
 from .configuration_flava import (
     FlavaConfig,
     FlavaImageCodebookConfig,
@@ -844,6 +845,7 @@ FLAVA_PRETRAINING_START_DOCSTRING_EXTRA = r"""
 """
 
 
+@register(backends=("torch",))
 class FlavaPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
@@ -875,6 +877,7 @@ class FlavaPreTrainedModel(PreTrainedModel):
     "The bare FLAVA Image Model transformer outputting raw hidden-states without any specific head on top.",
     FLAVA_START_DOCSTRING.format(config="FlavaImageConfig"),
 )
+@register(backends=("torch",))
 class FlavaImageModel(FlavaPreTrainedModel):
     config_class = FlavaImageConfig
     # This override allows us to load FlavaImageModel from FlavaModel/FlavaForPreTraining checkpoints.
@@ -974,6 +977,7 @@ class FlavaImageModel(FlavaPreTrainedModel):
     "The bare FLAVA Text Model transformer outputting raw hidden-states without any specific head on top.",
     FLAVA_START_DOCSTRING.format(config="FlavaTextConfig"),
 )
+@register(backends=("torch",))
 class FlavaTextModel(FlavaPreTrainedModel):
     config_class = FlavaTextConfig
     # This override allows us to load FlavaTextModel from FlavaModel/FlavaForPreTraining checkpoints.
@@ -1079,6 +1083,7 @@ class FlavaTextModel(FlavaPreTrainedModel):
     "The bare FLAVA Multimodal Model transformer outputting raw hidden-states without any specific head on top.",
     FLAVA_START_DOCSTRING.format(config="FlavaMultimodalConfig"),
 )
+@register(backends=("torch",))
 class FlavaMultimodalModel(FlavaPreTrainedModel):
     config_class = FlavaMultimodalConfig
     # This override allows us to load FlavaMultimodalModel from FlavaModel/FlavaForPreTraining checkpoints.
@@ -1177,6 +1182,7 @@ class FlavaMultimodalModel(FlavaPreTrainedModel):
     "The bare FLAVA Model transformer outputting raw hidden-states without any specific head on top.",
     FLAVA_START_DOCSTRING.format(config="FlavaConfig"),
 )
+@register(backends=("torch",))
 class FlavaModel(FlavaPreTrainedModel):
     config_class = FlavaConfig
 
@@ -1512,6 +1518,7 @@ class FlavaImageCodebookLayerGroup(nn.Module):
     """,
     FLAVA_START_DOCSTRING.format(config="FlavaImageCodebookConfig"),
 )
+@register(backends=("torch",))
 class FlavaImageCodebook(FlavaPreTrainedModel):
     base_model_prefix = ""
     config_class = FlavaImageCodebookConfig
@@ -1724,6 +1731,7 @@ class FlavaGlobalContrastiveHead(nn.Module):
     """,
     FLAVA_START_DOCSTRING.format(config="FlavaConfig") + FLAVA_PRETRAINING_START_DOCSTRING_EXTRA,
 )
+@register(backends=("torch",))
 class FlavaForPreTraining(FlavaPreTrainedModel):
     # Those are linked to xxx.bias
     _tied_weights_keys = [
@@ -2094,3 +2102,13 @@ class FlavaForPreTraining(FlavaPreTrainedModel):
             mmm_image_logits=mmm_image_logits,
             mmm_text_logits=mmm_text_logits,
         )
+
+__all__ = [
+    "FlavaPreTrainedModel",
+    "FlavaImageModel",
+    "FlavaTextModel",
+    "FlavaMultimodalModel",
+    "FlavaModel",
+    "FlavaImageCodebook",
+    "FlavaForPreTraining"
+]

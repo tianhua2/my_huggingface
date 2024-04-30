@@ -44,6 +44,7 @@ from ...modeling_utils import (
     prune_linear_layer,
 )
 from ...utils import logging
+from ...utils.import_utils import register
 from .configuration_markuplm import MarkupLMConfig
 
 
@@ -703,6 +704,7 @@ class MarkupLMEncoder(nn.Module):
         )
 
 
+@register(backends=("torch",))
 class MarkupLMPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
@@ -800,6 +802,7 @@ MARKUPLM_INPUTS_DOCSTRING = r"""
     "The bare MarkupLM Model transformer outputting raw hidden-states without any specific head on top.",
     MARKUPLM_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class MarkupLMModel(MarkupLMPreTrainedModel):
     # Copied from transformers.models.clap.modeling_clap.ClapTextModel.__init__ with ClapText->MarkupLM
     def __init__(self, config, add_pooling_layer=True):
@@ -979,6 +982,7 @@ class MarkupLMModel(MarkupLMPreTrainedModel):
     """,
     MARKUPLM_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class MarkupLMForQuestionAnswering(MarkupLMPreTrainedModel):
     # Copied from transformers.models.bert.modeling_bert.BertForQuestionAnswering.__init__ with bert->markuplm, Bert->MarkupLM
     def __init__(self, config):
@@ -1099,6 +1103,7 @@ class MarkupLMForQuestionAnswering(MarkupLMPreTrainedModel):
 
 
 @add_start_docstrings("""MarkupLM Model with a `token_classification` head on top.""", MARKUPLM_START_DOCSTRING)
+@register(backends=("torch",))
 class MarkupLMForTokenClassification(MarkupLMPreTrainedModel):
     # Copied from transformers.models.bert.modeling_bert.BertForTokenClassification.__init__ with bert->markuplm, Bert->MarkupLM
     def __init__(self, config):
@@ -1205,6 +1210,7 @@ class MarkupLMForTokenClassification(MarkupLMPreTrainedModel):
     """,
     MARKUPLM_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class MarkupLMForSequenceClassification(MarkupLMPreTrainedModel):
     # Copied from transformers.models.bert.modeling_bert.BertForSequenceClassification.__init__ with bert->markuplm, Bert->MarkupLM
     def __init__(self, config):
@@ -1318,3 +1324,11 @@ class MarkupLMForSequenceClassification(MarkupLMPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+
+__all__ = [
+    "MarkupLMPreTrainedModel",
+    "MarkupLMModel",
+    "MarkupLMForQuestionAnswering",
+    "MarkupLMForTokenClassification",
+    "MarkupLMForSequenceClassification"
+]

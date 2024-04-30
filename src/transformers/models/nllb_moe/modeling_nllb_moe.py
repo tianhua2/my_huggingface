@@ -39,6 +39,7 @@ from ...utils import (
     logging,
     replace_return_docstrings,
 )
+from ...utils.import_utils import register
 from .configuration_nllb_moe import NllbMoeConfig
 
 
@@ -210,6 +211,7 @@ class NllbMoeSinusoidalPositionalEmbedding(nn.Module):
         return position_ids.unsqueeze(0).expand(input_shape).contiguous() + past_key_values_length
 
 
+@register(backends=("torch",))
 class NllbMoeTop2Router(nn.Module):
     """
     Router using tokens choose top-2 experts assignment.
@@ -387,6 +389,7 @@ class NllbMoeDenseActDense(nn.Module):
         return hidden_states
 
 
+@register(backends=("torch",))
 class NllbMoeSparseMLP(nn.Module):
     r"""
     Implementation of the NLLB-MoE sparse MLP module.
@@ -823,6 +826,7 @@ class NllbMoeDecoderLayer(nn.Module):
         return outputs
 
 
+@register(backends=("torch",))
 class NllbMoePreTrainedModel(PreTrainedModel):
     config_class = NllbMoeConfig
     base_model_prefix = "model"
@@ -1449,6 +1453,7 @@ class NllbMoeDecoder(NllbMoePreTrainedModel):
     "The bare NllbMoe Model outputting raw hidden-states without any specific head on top.",
     NLLB_MOE_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class NllbMoeModel(NllbMoePreTrainedModel):
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
 
@@ -1586,6 +1591,7 @@ class NllbMoeModel(NllbMoePreTrainedModel):
 @add_start_docstrings(
     "The NllbMoe Model with a language modeling head. Can be used for summarization.", NLLB_MOE_START_DOCSTRING
 )
+@register(backends=("torch",))
 class NllbMoeForConditionalGeneration(NllbMoePreTrainedModel):
     base_model_prefix = "model"
     _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
@@ -1788,3 +1794,11 @@ class NllbMoeForConditionalGeneration(NllbMoePreTrainedModel):
                 tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past),
             )
         return reordered_past
+
+__all__ = [
+    "NllbMoePreTrainedModel",
+    "NllbMoeModel",
+    "NllbMoeForConditionalGeneration",
+    "NllbMoeSparseMLP",
+    "NllbMoeTop2Router",
+]

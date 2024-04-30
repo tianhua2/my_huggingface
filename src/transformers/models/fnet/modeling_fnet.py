@@ -25,6 +25,7 @@ from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
 from ...utils import is_scipy_available
+from ...utils.import_utils import register
 
 
 if is_scipy_available():
@@ -391,6 +392,7 @@ class FNetPreTrainingHeads(nn.Module):
         return prediction_scores, seq_relationship_score
 
 
+@register(backends=("torch",))
 class FNetPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
@@ -495,6 +497,7 @@ FNET_INPUTS_DOCSTRING = r"""
     "The bare FNet Model transformer outputting raw hidden-states without any specific head on top.",
     FNET_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class FNetModel(FNetPreTrainedModel):
     """
 
@@ -604,6 +607,7 @@ class FNetModel(FNetPreTrainedModel):
     """,
     FNET_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class FNetForPreTraining(FNetPreTrainedModel):
     _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
@@ -698,6 +702,7 @@ class FNetForPreTraining(FNetPreTrainedModel):
 
 
 @add_start_docstrings("""FNet Model with a `language modeling` head on top.""", FNET_START_DOCSTRING)
+@register(backends=("torch",))
 class FNetForMaskedLM(FNetPreTrainedModel):
     _tied_weights_keys = ["cls.predictions.decoder.bias", "cls.predictions.decoder.weight"]
 
@@ -768,6 +773,7 @@ class FNetForMaskedLM(FNetPreTrainedModel):
     """FNet Model with a `next sentence prediction (classification)` head on top.""",
     FNET_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class FNetForNextSentencePrediction(FNetPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -863,6 +869,7 @@ class FNetForNextSentencePrediction(FNetPreTrainedModel):
     """,
     FNET_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class FNetForSequenceClassification(FNetPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -948,6 +955,7 @@ class FNetForSequenceClassification(FNetPreTrainedModel):
     """,
     FNET_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class FNetForMultipleChoice(FNetPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1027,6 +1035,7 @@ class FNetForMultipleChoice(FNetPreTrainedModel):
     """,
     FNET_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class FNetForTokenClassification(FNetPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1096,6 +1105,7 @@ class FNetForTokenClassification(FNetPreTrainedModel):
     """,
     FNET_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class FNetForQuestionAnswering(FNetPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1177,3 +1187,15 @@ class FNetForQuestionAnswering(FNetPreTrainedModel):
         return QuestionAnsweringModelOutput(
             loss=total_loss, start_logits=start_logits, end_logits=end_logits, hidden_states=outputs.hidden_states
         )
+
+__all__ = [
+    "FNetPreTrainedModel",
+    "FNetModel",
+    "FNetForPreTraining",
+    "FNetForMaskedLM",
+    "FNetForNextSentencePrediction",
+    "FNetForSequenceClassification",
+    "FNetForMultipleChoice",
+    "FNetForTokenClassification",
+    "FNetForQuestionAnswering"
+]

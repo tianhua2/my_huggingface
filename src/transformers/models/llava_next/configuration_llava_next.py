@@ -15,6 +15,7 @@
 
 from ...configuration_utils import PretrainedConfig
 from ...utils import logging
+from ...utils.import_utils import register
 from ..auto import CONFIG_MAPPING
 
 
@@ -25,6 +26,7 @@ LLAVA_NEXT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
 }
 
 
+@register()
 class LlavaNextConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`LlavaNextForConditionalGeneration`]. It is used to instantiate an
@@ -139,3 +141,7 @@ class LlavaNextConfig(PretrainedConfig):
         self.text_config = text_config
 
         super().__init__(**kwargs)
+
+__all__ = [
+    "LlavaNextConfig"
+]

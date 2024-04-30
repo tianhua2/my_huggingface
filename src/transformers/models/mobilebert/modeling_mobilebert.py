@@ -51,6 +51,7 @@ from ...utils import (
     logging,
     replace_return_docstrings,
 )
+from ...utils.import_utils import register
 from .configuration_mobilebert import MobileBertConfig
 
 
@@ -77,6 +78,7 @@ _SEQ_CLASS_EXPECTED_OUTPUT = "'others'"
 _SEQ_CLASS_EXPECTED_LOSS = "4.72"
 
 
+@register()
 def load_tf_weights_in_mobilebert(model, config, tf_checkpoint_path):
     """Load tf checkpoints in a pytorch model."""
     try:
@@ -676,6 +678,7 @@ class MobileBertPreTrainingHeads(nn.Module):
         return prediction_scores, seq_relationship_score
 
 
+@register(backends=("torch",))
 class MobileBertPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
@@ -807,6 +810,7 @@ MOBILEBERT_INPUTS_DOCSTRING = r"""
     "The bare MobileBert Model transformer outputting raw hidden-states without any specific head on top.",
     MOBILEBERT_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class MobileBertModel(MobileBertPreTrainedModel):
     """
     https://arxiv.org/pdf/2004.02984.pdf
@@ -921,6 +925,7 @@ class MobileBertModel(MobileBertPreTrainedModel):
     """,
     MOBILEBERT_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class MobileBertForPreTraining(MobileBertPreTrainedModel):
     _tied_weights_keys = ["cls.predictions.decoder.weight", "cls.predictions.decoder.bias"]
 
@@ -1029,6 +1034,7 @@ class MobileBertForPreTraining(MobileBertPreTrainedModel):
 
 
 @add_start_docstrings("""MobileBert Model with a `language modeling` head on top.""", MOBILEBERT_START_DOCSTRING)
+@register(backends=("torch",))
 class MobileBertForMaskedLM(MobileBertPreTrainedModel):
     _tied_weights_keys = ["cls.predictions.decoder.weight", "cls.predictions.decoder.bias"]
 
@@ -1129,6 +1135,7 @@ class MobileBertOnlyNSPHead(nn.Module):
     """MobileBert Model with a `next sentence prediction (classification)` head on top.""",
     MOBILEBERT_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class MobileBertForNextSentencePrediction(MobileBertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1233,6 +1240,7 @@ class MobileBertForNextSentencePrediction(MobileBertPreTrainedModel):
     MOBILEBERT_START_DOCSTRING,
 )
 # Copied from transformers.models.bert.modeling_bert.BertForSequenceClassification with Bert->MobileBert all-casing
+@register(backends=("torch",))
 class MobileBertForSequenceClassification(MobileBertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1337,6 +1345,7 @@ class MobileBertForSequenceClassification(MobileBertPreTrainedModel):
     MOBILEBERT_START_DOCSTRING,
 )
 # Copied from transformers.models.bert.modeling_bert.BertForQuestionAnswering with Bert->MobileBert all-casing
+@register(backends=("torch",))
 class MobileBertForQuestionAnswering(MobileBertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1441,6 +1450,7 @@ class MobileBertForQuestionAnswering(MobileBertPreTrainedModel):
     MOBILEBERT_START_DOCSTRING,
 )
 # Copied from transformers.models.bert.modeling_bert.BertForMultipleChoice with Bert->MobileBert all-casing
+@register(backends=("torch",))
 class MobileBertForMultipleChoice(MobileBertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1538,6 +1548,7 @@ class MobileBertForMultipleChoice(MobileBertPreTrainedModel):
     MOBILEBERT_START_DOCSTRING,
 )
 # Copied from transformers.models.bert.modeling_bert.BertForTokenClassification with Bert->MobileBert all-casing
+@register(backends=("torch",))
 class MobileBertForTokenClassification(MobileBertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1612,3 +1623,16 @@ class MobileBertForTokenClassification(MobileBertPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+
+__all__ = [
+    "load_tf_weights_in_mobilebert",
+    "MobileBertPreTrainedModel",
+    "MobileBertModel",
+    "MobileBertForPreTraining",
+    "MobileBertForMaskedLM",
+    "MobileBertForNextSentencePrediction",
+    "MobileBertForSequenceClassification",
+    "MobileBertForQuestionAnswering",
+    "MobileBertForMultipleChoice",
+    "MobileBertForTokenClassification"
+]

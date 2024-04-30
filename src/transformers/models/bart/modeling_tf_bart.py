@@ -51,6 +51,7 @@ from ...utils import (
     logging,
     replace_return_docstrings,
 )
+from ...utils.import_utils import register
 from .configuration_bart import BartConfig
 
 
@@ -558,6 +559,7 @@ class TFBartClassificationHead(keras.layers.Layer):
                 self.out_proj.build([None, None, self.inner_dim])
 
 
+@register(backends=("tf",))
 class TFBartPretrainedModel(TFPreTrainedModel):
     config_class = BartConfig
     base_model_prefix = "model"
@@ -1267,6 +1269,7 @@ class TFBartMainLayer(keras.layers.Layer):
     "The bare BART Model outputting raw hidden-states without any specific head on top.",
     BART_START_DOCSTRING,
 )
+@register(backends=("tf",))
 class TFBartModel(TFBartPretrainedModel):
     _requires_load_weight_prefix = True
 
@@ -1380,6 +1383,7 @@ class BiasLayer(keras.layers.Layer):
     "The BART Model with a language modeling head. Can be used for summarization.",
     BART_START_DOCSTRING,
 )
+@register(backends=("tf",))
 class TFBartForConditionalGeneration(TFBartPretrainedModel, TFCausalLanguageModelingLoss):
     _keys_to_ignore_on_load_missing = [r"final_logits_bias"]
     _requires_load_weight_prefix = True
@@ -1580,6 +1584,7 @@ class TFBartForConditionalGeneration(TFBartPretrainedModel, TFCausalLanguageMode
     """,
     BART_START_DOCSTRING,
 )
+@register(backends=("tf",))
 class TFBartForSequenceClassification(TFBartPretrainedModel, TFSequenceClassificationLoss):
     def __init__(self, config: BartConfig, load_weight_prefix=None, *inputs, **kwargs):
         super().__init__(config, *inputs, **kwargs)
@@ -1710,3 +1715,10 @@ class TFBartForSequenceClassification(TFBartPretrainedModel, TFSequenceClassific
         if getattr(self, "classification_head", None) is not None:
             with tf.name_scope(self.classification_head.name):
                 self.classification_head.build(None)
+
+__all__ = [
+    "TFBartPretrainedModel",
+    "TFBartModel",
+    "TFBartForConditionalGeneration",
+    "TFBartForSequenceClassification"
+]

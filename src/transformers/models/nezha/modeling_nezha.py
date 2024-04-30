@@ -47,6 +47,7 @@ from ...utils import (
     logging,
     replace_return_docstrings,
 )
+from ...utils.import_utils import register
 from .configuration_nezha import NezhaConfig
 
 
@@ -712,6 +713,7 @@ class NezhaPreTrainingHeads(nn.Module):
         return prediction_scores, seq_relationship_score
 
 
+@register(backends=("torch",))
 class NezhaPreTrainedModel(PreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
@@ -839,6 +841,7 @@ NEZHA_INPUTS_DOCSTRING = r"""
     "The bare Nezha Model transformer outputting raw hidden-states without any specific head on top.",
     NEZHA_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class NezhaModel(NezhaPreTrainedModel):
     """
 
@@ -1019,6 +1022,7 @@ class NezhaModel(NezhaPreTrainedModel):
     """,
     NEZHA_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class NezhaForPreTraining(NezhaPreTrainedModel):
     _tied_weights_keys = ["cls.predictions.decoder"]
 
@@ -1121,6 +1125,7 @@ class NezhaForPreTraining(NezhaPreTrainedModel):
 
 
 @add_start_docstrings("""Nezha Model with a `language modeling` head on top.""", NEZHA_START_DOCSTRING)
+@register(backends=("torch",))
 class NezhaForMaskedLM(NezhaPreTrainedModel):
     _tied_weights_keys = ["cls.predictions.decoder"]
 
@@ -1227,6 +1232,7 @@ class NezhaForMaskedLM(NezhaPreTrainedModel):
     """Nezha Model with a `next sentence prediction (classification)` head on top.""",
     NEZHA_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class NezhaForNextSentencePrediction(NezhaPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1330,6 +1336,7 @@ class NezhaForNextSentencePrediction(NezhaPreTrainedModel):
     """,
     NEZHA_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class NezhaForSequenceClassification(NezhaPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1429,6 +1436,7 @@ class NezhaForSequenceClassification(NezhaPreTrainedModel):
     """,
     NEZHA_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class NezhaForMultipleChoice(NezhaPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1521,6 +1529,7 @@ class NezhaForMultipleChoice(NezhaPreTrainedModel):
     """,
     NEZHA_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class NezhaForTokenClassification(NezhaPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1600,6 +1609,7 @@ class NezhaForTokenClassification(NezhaPreTrainedModel):
     """,
     NEZHA_START_DOCSTRING,
 )
+@register(backends=("torch",))
 class NezhaForQuestionAnswering(NezhaPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1688,3 +1698,15 @@ class NezhaForQuestionAnswering(NezhaPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+
+__all__ = [
+    "NezhaPreTrainedModel",
+    "NezhaModel",
+    "NezhaForPreTraining",
+    "NezhaForMaskedLM",
+    "NezhaForNextSentencePrediction",
+    "NezhaForSequenceClassification",
+    "NezhaForMultipleChoice",
+    "NezhaForTokenClassification",
+    "NezhaForQuestionAnswering"
+]
