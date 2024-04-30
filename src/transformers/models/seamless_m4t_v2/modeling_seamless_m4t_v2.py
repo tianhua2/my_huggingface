@@ -51,9 +51,6 @@ _CHECKPOINT_FOR_DOC = ""
 _CONFIG_FOR_DOC = "SeamlessM4Tv2Config"
 
 
-from ..deprecated._archive_maps import SEAMLESS_M4T_V2_PRETRAINED_MODEL_ARCHIVE_LIST  # noqa: F401, E402
-
-
 SPEECHT5_PRETRAINED_HIFIGAN_CONFIG_ARCHIVE_MAP = {
     "microsoft/speecht5_hifigan": "https://huggingface.co/microsoft/speecht5_hifigan/resolve/main/config.json",
 }
