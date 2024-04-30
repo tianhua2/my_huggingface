@@ -211,6 +211,7 @@ class NllbMoeSinusoidalPositionalEmbedding(nn.Module):
         return position_ids.unsqueeze(0).expand(input_shape).contiguous() + past_key_values_length
 
 
+@register(backends=("torch",))
 class NllbMoeTop2Router(nn.Module):
     """
     Router using tokens choose top-2 experts assignment.
@@ -388,6 +389,7 @@ class NllbMoeDenseActDense(nn.Module):
         return hidden_states
 
 
+@register(backends=("torch",))
 class NllbMoeSparseMLP(nn.Module):
     r"""
     Implementation of the NLLB-MoE sparse MLP module.
@@ -1796,5 +1798,7 @@ class NllbMoeForConditionalGeneration(NllbMoePreTrainedModel):
 __all__ = [
     "NllbMoePreTrainedModel",
     "NllbMoeModel",
-    "NllbMoeForConditionalGeneration"
+    "NllbMoeForConditionalGeneration",
+    "NllbMoeSparseMLP",
+    "NllbMoeTop2Router",
 ]
