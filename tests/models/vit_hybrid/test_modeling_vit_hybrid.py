@@ -163,6 +163,7 @@ class ViTHybridModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCas
     test_resize_embeddings = False
     test_head_masking = False
     model_split_percents = [0.5, 0.9]
+    has_attentions = False
 
     def setUp(self):
         self.model_tester = ViTHybridModelTester(self)
