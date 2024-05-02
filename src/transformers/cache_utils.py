@@ -193,19 +193,23 @@ class QuantCache(Cache):
     """
     A cache similar to what described in the [KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache paper](https://arxiv.org/abs/2402.02750).
     It allows the model to generate longer sequence length without allocating much memory for Key and Value cache by applying quantization.
-    In contrast to what is described in the paper, Keys and Values are both quantized per channel.
+
+    The cache has two types of storage, one for full/half precision and one for the quantized cache. A `residual length` is set as a maxiumum capacity for
+    full/half precision cache. When the length goes beyong maximum capacity, fll/half precision cache is discarded and moved into quantized cache. The
+    quantization is done per-channel with a set `q_group_size` for both Keys and Values, in contrast to what was described in the paper. Current implementation
+    supports int2 and int4 cache.
 
     Cache stores the full/half precision Key and Value states as a list of tensors, one for each layer. The maximum expected shape for each tensor is
     `[batch_size, num_heads, residual_length, head_dim]`. Quantized Key and Value are stored separately as a list of quantized tensors, one for each layer.
     The size of each tensor is `[batch_size, num_heads, seq_len - residual_length, head_dim]`
 
     Parameters:
-        nbits (`Optional[int]`):
+        nbits (`Optional[int]`, *optional*, defaults to 2):
             Number of bits, can be 2 or 4. Defaults to 2.
-        q_group_size (`Optional[int]`):
+        q_group_size (`Optional[int]`, *optional*, defaults to 64):
             Size of the quantization group, should be a divisor of the model's hidden dimension.
             Defaults to 64.
-        residual_length (`Optional[int]`):
+        residual_length (`Optional[int]`, *optional*, defaults to 128):
             Length of the residual cache which will always be stored in full/half presicion.
             Defaults to 128.
     """
@@ -261,8 +265,8 @@ class QuantCache(Cache):
             self.seen_token += key_states.shape[-2]
 
         if len(self.key_cache) <= layer_idx:
-            self._key_cache_quant.append(self.quantize(key_states.contiguous()))
-            self._value_cache_quant.append(self.quantize(value_states.contiguous()))
+            self._key_cache_quant.append(self._quantize(key_states.contiguous()))
+            self._value_cache_quant.append(self._quantize(value_states.contiguous()))
             self.key_cache.append(torch.zeros(0, dtype=key_states.dtype, device=key_states.device))
             self.value_cache.append(torch.zeros(0, dtype=key_states.dtype, device=key_states.device))
             keys_to_return, values_to_return = key_states, value_states
@@ -289,8 +293,8 @@ class QuantCache(Cache):
                 self.key_cache[layer_idx].dim() == 4
                 and self.key_cache[layer_idx].shape[-2] + 1 == self.residual_length
             ):
-                self._key_cache_quant[layer_idx] = self.quantize(keys_to_return.contiguous())
-                self._value_cache_quant[layer_idx] = self.quantize(values_to_return.contiguous())
+                self._key_cache_quant[layer_idx] = self._quantize(keys_to_return.contiguous())
+                self._value_cache_quant[layer_idx] = self._quantize(values_to_return.contiguous())
                 self.key_cache[layer_idx] = torch.zeros(0, dtype=key_states.dtype, device=key_states.device)
                 self.value_cache[layer_idx] = torch.zeros(0, dtype=key_states.dtype, device=key_states.device)
             else:
@@ -309,7 +313,7 @@ class QuantCache(Cache):
         """Returns the maximum sequence length of the cached states. DynamicCache does not have a maximum length."""
         return None
 
-    def quantize(self, tensor):
+    def _quantize(self, tensor):
         qtensor = QBitsTensor.quantize(tensor, axis=0, qtype=self.qtype, group_size=self.q_group_size)
         return qtensor
 

@@ -354,6 +354,10 @@ A [`Constraint`] can be used to force the generation to include specific tokens 
     - to_legacy_cache
     - from_legacy_cache
 
+[[autodoc]] QuantCache
+    - update
+    - get_seq_length
+
 [[autodoc]] SinkCache
     - update
     - get_seq_length
@@ -362,4 +366,4 @@ A [`Constraint`] can be used to force the generation to include specific tokens 
 [[autodoc]] StaticCache
     - update
     - get_seq_length
-    - reorder_cache
+    - reset

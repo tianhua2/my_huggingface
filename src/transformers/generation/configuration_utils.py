@@ -283,7 +283,18 @@ class GenerationConfig(PushToHubMixin):
 
         cache_implementation (`str`, *optional*, default to `None`):
             Cache class that should be used when generating.
-
+        cache_config (`Union[CacheConfig, dict]`, *optional*, default to `None`):
+            Arguments used for quantized cache that stores keys and values in lower precision for memory efficiency.
+            If passed as `Dict`, it will be converted to a `CacheConfig` internally.
+            Accepts the following keys:
+            - nbits (`int`, *optional*, defaults to 2):
+                Number of bits, can be 2 or 4. Defaults to 2.
+            - q_group_size (`int`, *optional*, defaults to 64):
+                Size of the quantization group, should be a divisor of the model's hidden dimension.
+                Defaults to 64.
+            - residual_length (`int`, *optional*, defaults to 128):
+                Length of the residual cache which will always be stored in full/half presicion.
+                Defaults to 128.
 
         > Wild card
 
@@ -1119,12 +1130,12 @@ class CacheConfig:
     Configuration class for quantized cache settings.
 
     Attributes:
-        nbits (`Optional[int]`):
+        nbits (`Optional[int]`, *optional*, defaults to 2):
             Number of bits, can be 2 or 4. Defaults to 2.
-        q_group_size (`Optional[int]`):
+        q_group_size (`Optional[int]`, *optional*, defaults to 64):
             Size of the quantization group, should be a divisor of the model's hidden dimension.
             Defaults to 64.
-        residual_length (`Optional[int]`):
+        residual_length (`Optional[int]`, *optional*, defaults to 128):
             Length of the residual cache which will always be stored in full/half presicion.
             Defaults to 128.
     """

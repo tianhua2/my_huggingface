@@ -41,6 +41,8 @@ like token streaming.
 	- validate
 	- get_generation_mode
 
+[[autodoc]] generation.CacheConfig
+
 ## GenerationMixin
 
 [[autodoc]] generation.GenerationMixin

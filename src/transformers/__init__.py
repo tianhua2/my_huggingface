@@ -103,7 +103,7 @@ _import_structure = {
     "feature_extraction_sequence_utils": ["SequenceFeatureExtractor"],
     "feature_extraction_utils": ["BatchFeature", "FeatureExtractionMixin"],
     "file_utils": [],
-    "generation": ["GenerationConfig", "TextIteratorStreamer", "TextStreamer"],
+    "generation": ["CacheConfig", "GenerationConfig", "TextIteratorStreamer", "TextStreamer"],
     "hf_argparser": ["HfArgumentParser"],
     "hyperparameter_search": [],
     "image_transforms": [],
@@ -1395,7 +1395,7 @@ else:
     _import_structure["activations"] = []
     _import_structure["benchmark.benchmark"] = ["PyTorchBenchmark"]
     _import_structure["benchmark.benchmark_args"] = ["PyTorchBenchmarkArguments"]
-    _import_structure["cache_utils"] = ["Cache", "DynamicCache", "SinkCache", "StaticCache"]
+    _import_structure["cache_utils"] = ["Cache", "DynamicCache", "QuantCache", "SinkCache", "StaticCache"]
     _import_structure["data.datasets"] = [
         "GlueDataset",
         "GlueDataTrainingArguments",
@@ -5077,7 +5077,7 @@ if TYPE_CHECKING:
     from .feature_extraction_utils import BatchFeature, FeatureExtractionMixin
 
     # Generation
-    from .generation import GenerationConfig, TextIteratorStreamer, TextStreamer
+    from .generation import CacheConfig, GenerationConfig, TextIteratorStreamer, TextStreamer
     from .hf_argparser import HfArgumentParser
 
     # Integrations
@@ -6349,7 +6349,7 @@ if TYPE_CHECKING:
         # Benchmarks
         from .benchmark.benchmark import PyTorchBenchmark
         from .benchmark.benchmark_args import PyTorchBenchmarkArguments
-        from .cache_utils import Cache, DynamicCache, SinkCache, StaticCache
+        from .cache_utils import Cache, DynamicCache, QuantCache, SinkCache, StaticCache
         from .data.datasets import (
             GlueDataset,
             GlueDataTrainingArguments,

@@ -739,6 +739,29 @@ class LlamaIntegrationTest(unittest.TestCase):
         static_compiled_text = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
         self.assertEqual(EXPECTED_TEXT_COMPLETION[self.cuda_compute_capability_major_version], static_compiled_text)
 
+    @slow
+    @require_torch_gpu
+    @require_read_token
+    def test_quantized_cache(self):
+        EXPECTED_TEXT_COMPLETION = [
+            "Simply put, the theory of relativity states that 1) time is relative, and 2) space is relative.\nThe theory of relativity is a theory of time and space.\nThe theory of relativity is a theory of time and",
+            "My favorite all time favorite condiment is ketchup. I love it. I love it so much that I have a hard time believing that it was invented in the 17th century. I mean, I know it was invented in",
+        ]
+
+        prompts = [
+            "Simply put, the theory of relativity states that ",
+            "My favorite all time favorite condiment is ketchup.",
+        ]
+        tokenizer = LlamaTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf", pad_token="</s>", padding_side="left")
+        model = LlamaForCausalLM.from_pretrained(
+            "meta-llama/Llama-2-7b-hf", device_map="sequential", torch_dtype=torch.float16
+        )
+        inputs = tokenizer(prompts, return_tensors="pt", padding=True).to(model.device)
+
+        generated_ids = model.generate(**inputs, max_new_tokens=40, do_sample=False, cache_implementation="quantized")
+        text = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+        self.assertEqual(EXPECTED_TEXT_COMPLETION, text)
+
 
 @require_torch
 class CodeLlamaIntegrationTest(unittest.TestCase):
