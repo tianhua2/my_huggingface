@@ -1337,7 +1337,6 @@ class GenerationMixin:
         self,
         inputs: Optional[torch.Tensor] = None,
         generation_config: Optional[GenerationConfig] = None,
-        cache_config: Optional[CacheConfig] = CacheConfig(),
         logits_processor: Optional[LogitsProcessorList] = None,
         stopping_criteria: Optional[StoppingCriteriaList] = None,
         prefix_allowed_tokens_fn: Optional[Callable[[int, torch.Tensor], List[int]]] = None,
@@ -1552,11 +1551,16 @@ class GenerationMixin:
                 if model_kwargs.get("past_key_values") is not None:
                     if not isinstance(model_kwargs["past_key_values"], QuantCache):
                         raise ValueError(
-                            "Setting `QuantCache` and passing another type of `past_key_values` is not implemented. Either pass `QuantCache` type or do not pass `past_key_values`"
+                            f"Setting `QuantCache` and passing {type(model_kwargs['past_key_values'])} for `past_key_values` is not implemented. "
+                            "Either pass `QuantCache` type or do not pass `past_key_values`"
                         )
                 else:
+                    # get the config with defualt values if user did not pass anything
+                    cache_config = (
+                        generation_config.cache_config if generation_config.cache_config is not None else CacheConfig()
+                    )
                     model_kwargs["past_key_values"] = QuantCache(
-                        n_bits=cache_config.nbits,
+                        nbits=cache_config.nbits,
                         q_group_size=cache_config.q_group_size,
                         residual_length=cache_config.residual_length,
                     )

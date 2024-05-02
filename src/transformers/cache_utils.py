@@ -190,14 +190,38 @@ class DynamicCache(Cache):
 
 
 class QuantCache(Cache):
-    def __init__(self, n_bits: int = 2, q_group_size: int = 64, residual_length: int = 128) -> None:
+    """
+    A cache similar to what described in the [KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache paper](https://arxiv.org/abs/2402.02750).
+    It allows the model to generate longer sequence length without allocating much memory for Key and Value cache by applying quantization.
+    In contrast to what is described in the paper, Keys and Values are both quantized per channel.
+
+    Cache stores the full/half precision Key and Value states as a list of tensors, one for each layer. The maximum expected shape for each tensor is
+    `[batch_size, num_heads, residual_length, head_dim]`. Quantized Key and Value are stored separately as a list of quantized tensors, one for each layer.
+    The size of each tensor is `[batch_size, num_heads, seq_len - residual_length, head_dim]`
+
+    Parameters:
+        nbits (`Optional[int]`):
+            Number of bits, can be 2 or 4. Defaults to 2.
+        q_group_size (`Optional[int]`):
+            Size of the quantization group, should be a divisor of the model's hidden dimension.
+            Defaults to 64.
+        residual_length (`Optional[int]`):
+            Length of the residual cache which will always be stored in full/half presicion.
+            Defaults to 128.
+    """
+
+    def __init__(self, nbits: int = 2, q_group_size: int = 64, residual_length: int = 128) -> None:
+        if nbits not in [2, 4]:
+            raise ValueError(f"`nbits` has to be one of [`2`, `4`] but got {nbits}")
+
         self.key_cache: List[torch.Tensor] = []
         self.value_cache: List[torch.Tensor] = []
         self._key_cache_quant: List[torch.Tensor] = []
         self._value_cache_quant: List[torch.Tensor] = []
         self.seen_token = 0
+
         self.residual_length = residual_length
-        self.qtype = qint4 if n_bits == 4 else qint2
+        self.qtype = qint4 if nbits == 4 else qint2
         self.q_group_size = q_group_size
 
     def __getitem__(self, layer_idx: int) -> List[Tuple[torch.Tensor]]:
@@ -283,19 +307,6 @@ class QuantCache(Cache):
 
     def get_max_length(self) -> Optional[int]:
         """Returns the maximum sequence length of the cached states. DynamicCache does not have a maximum length."""
-        return None
-
-    def reorder_cache(self, beam_idx: torch.LongTensor):
-        """Reorders the cache for beam search, given the selected beam indices."""
-        pass
-
-    def to_legacy_cache(self) -> Tuple[Tuple[torch.Tensor], Tuple[torch.Tensor]]:
-        """Converts the `DynamicCache` instance into the its equivalent in the legacy cache format."""
-        return None
-
-    @classmethod
-    def from_legacy_cache(cls, past_key_values: Optional[Tuple[Tuple[torch.FloatTensor]]] = None) -> "DynamicCache":
-        """Converts a cache in the legacy cache format into an equivalent `DynamicCache`."""
         return None
 
     def quantize(self, tensor):

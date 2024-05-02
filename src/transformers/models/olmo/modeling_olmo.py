@@ -1000,14 +1000,12 @@ class OlmoModel(OlmoPreTrainedModel):
             all_hidden_states += (hidden_states,)
 
         next_cache = None
-        if use_cache and not isinstance(next_decoder_cache, QuantCache):
+        if use_cache:
             next_cache = (
                 next_decoder_cache.to_legacy_cache()
                 if isinstance(next_decoder_cache, DynamicCache)
                 else next_decoder_cache
             )
-        elif isinstance(next_decoder_cache, QuantCache):
-            next_cache = next_decoder_cache
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
         return BaseModelOutputWithPast(

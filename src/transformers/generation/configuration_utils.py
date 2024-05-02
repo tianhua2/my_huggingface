@@ -18,7 +18,7 @@ import copy
 import json
 import os
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, is_dataclass
 from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 
 from .. import __version__
@@ -359,6 +359,12 @@ class GenerationConfig(PushToHubMixin):
 
         # Cache implementation
         self.cache_implementation = kwargs.pop("cache_implementation", None)
+        self.cache_config = kwargs.pop("cache_config", None)
+        if self.cache_implementation == "quantized":
+            if self.cache_config is None:
+                self.cache_config = CacheConfig()
+            elif isinstance(self.cache_config, dict):
+                self.cache_config = CacheConfig.from_dict(self.cache_config)
 
         # Prompt lookup decoding
         self.prompt_lookup_num_tokens = kwargs.pop("prompt_lookup_num_tokens", None)
@@ -610,7 +616,13 @@ class GenerationConfig(PushToHubMixin):
                     f"({self.num_beams})."
                 )
 
-        # 5. check common issue: passing `generate` arguments inside the generation config
+        # 5. check `cache_config`
+        if self.cache_config is not None:
+            if not isinstance(self.cache_config, CacheConfig):
+                self.cache_config = CacheConfig.from_dict(self.cache_config)
+            self.cache_config.validate()
+
+        # 6. check common issue: passing `generate` arguments inside the generation config
         generate_arguments = (
             "logits_processor",
             "stopping_criteria",
@@ -1018,7 +1030,16 @@ class GenerationConfig(PushToHubMixin):
             else:
                 return obj
 
+        def convert_dataclass_to_dict(obj):
+            if isinstance(obj, dict):
+                return {key: convert_dataclass_to_dict(value) for key, value in obj.items()}
+            elif is_dataclass(obj):
+                return obj.to_dict()
+            else:
+                return obj
+
         config_dict = convert_keys_to_string(config_dict)
+        config_dict = convert_dataclass_to_dict(config_dict)
 
         return json.dumps(config_dict, indent=2, sort_keys=True) + "\n"
 
@@ -1099,7 +1120,7 @@ class CacheConfig:
 
     Attributes:
         nbits (`Optional[int]`):
-            Number of bits, cam be 2 or 4. Defaults to 2.
+            Number of bits, can be 2 or 4. Defaults to 2.
         q_group_size (`Optional[int]`):
             Size of the quantization group, should be a divisor of the model's hidden dimension.
             Defaults to 64.

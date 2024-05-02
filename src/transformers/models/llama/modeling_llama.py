@@ -30,7 +30,7 @@ from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
 from ...activations import ACT2FN
-from ...cache_utils import Cache, DynamicCache, QuantCache, StaticCache
+from ...cache_utils import Cache, DynamicCache, StaticCache
 from ...modeling_attn_mask_utils import AttentionMaskConverter
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
@@ -960,7 +960,6 @@ class LlamaModel(LlamaPreTrainedModel):
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
 
-        past_seen_tokens = 0
         if use_cache and not isinstance(past_key_values, Cache):  # kept for BC (non `Cache` `past_key_values` inputs)
             past_key_values = DynamicCache.from_legacy_cache(past_key_values)
 
@@ -1023,14 +1022,12 @@ class LlamaModel(LlamaPreTrainedModel):
             all_hidden_states += (hidden_states,)
 
         next_cache = None
-        if use_cache and not isinstance(next_decoder_cache, QuantCache):
+        if use_cache:
             next_cache = (
                 next_decoder_cache.to_legacy_cache()
                 if isinstance(next_decoder_cache, DynamicCache)
                 else next_decoder_cache
             )
-        elif isinstance(next_decoder_cache, QuantCache):
-            next_cache = next_decoder_cache
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
         return BaseModelOutputWithPast(
