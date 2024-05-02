@@ -43,6 +43,14 @@ _import_structure = {
         "unset_hf_deepspeed_config",
     ],
     "eetq": ["replace_with_eetq_linear"],
+    "ggml": [
+        "GGUF_CONFIG_MAPPING",
+        "GGUF_TENSOR_MAPPING",
+        "GGUF_TOKENIZER_MAPPING",
+        "_gguf_parse_value",
+        "load_dequant_gguf_tensor",
+        "load_gguf",
+    ],
     "integration_utils": [
         "INTEGRATION_TO_CALLBACK",
         "AzureMLCallback",
@@ -113,6 +121,14 @@ if TYPE_CHECKING:
         unset_hf_deepspeed_config,
     )
     from .eetq import replace_with_eetq_linear
+    from .ggml import (
+        GGUF_CONFIG_MAPPING,
+        GGUF_TENSOR_MAPPING,
+        GGUF_TOKENIZER_MAPPING,
+        _gguf_parse_value,
+        load_dequant_gguf_tensor,
+        load_gguf,
+    )
     from .integration_utils import (
         INTEGRATION_TO_CALLBACK,
         AzureMLCallback,
