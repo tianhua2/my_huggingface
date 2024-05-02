@@ -1271,7 +1271,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
                 cache_length = past_length if max_cache_length is None else torch.min(max_cache_length, past_length)
             # TODO joao: remove this `else` after `generate` prioritizes `Cache` objects
             else:
-                cache_length = past_length = past_key_values[0][0].shape[2]
+                cache_length = past_length = sum(x.shape[-2] for x in past_key_values[0][0])
                 max_cache_length = None
 
             # Keep only the unprocessed tokens:
