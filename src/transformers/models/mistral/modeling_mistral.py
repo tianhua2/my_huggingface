@@ -1258,7 +1258,8 @@ class MistralForCausalLM(MistralPreTrainedModel):
         reordered_past = ()
         for layer_past in past_key_values:
             reordered_past += (
-                tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past),
+                [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[0]],
+                [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[1]],
             )
         return reordered_past
 

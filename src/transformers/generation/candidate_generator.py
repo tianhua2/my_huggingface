@@ -375,18 +375,27 @@ def _crop_past_key_values(model, past_key_values, maximum_length):
                 past_key_values[idx] = past_key_values[idx][:, :, :maximum_length, :]
     elif isinstance(past_key_values, DynamicCache):
         for idx in range(len(past_key_values.key_cache)):
-            if past_key_values.value_cache[idx].shape[-1] != 0:
-                past_key_values.key_cache[idx] = past_key_values.key_cache[idx][:, :, :maximum_length, :]
-                past_key_values.value_cache[idx] = past_key_values.value_cache[idx][:, :, :maximum_length, :]
+            if past_key_values.value_cache[idx][0].shape[-1] != 0:
+                past_key_values.key_cache[idx] = [x[:, :, :maximum_length, :] for x in past_key_values.key_cache[idx]]
+                past_key_values.value_cache[idx] = [x[:, :, :maximum_length, :] for x in past_key_values.value_cache[idx]]
 
     elif past_key_values is not None:
-        for idx in range(len(past_key_values)):
-            new_past.append(
-                (
-                    past_key_values[idx][0][:, :, :maximum_length, :],
-                    past_key_values[idx][1][:, :, :maximum_length, :],
+        if isinstance(past_key_values[0][0], list):
+            for idx in range(len(past_key_values)):
+                new_past.append(
+                    (
+                        [x[:, :, :maximum_length, :] for x in past_key_values[idx][0]],
+                        [x[:, :, :maximum_length, :] for x in past_key_values[idx][1]]
+                    )
                 )
-            )
+        else:
+            for idx in range(len(past_key_values)):
+                new_past.append(
+                    (
+                        past_key_values[idx][0][:, :, :maximum_length, :],
+                        past_key_values[idx][1][:, :, :maximum_length, :],
+                    )
+                )
         past_key_values = tuple(new_past)
     return past_key_values
 
