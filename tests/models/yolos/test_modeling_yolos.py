@@ -226,6 +226,7 @@ class YolosModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
     def test_attention_outputs(self):
         config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
         config.return_dict = True
+        config._attn_implementation = "eager"
 
         # in YOLOS, the seq_len is different
         seq_len = self.model_tester.expected_seq_len

@@ -310,6 +310,10 @@ class ViTBertModelTest(VisionTextDualEncoderMixin, unittest.TestCase):
         return model, inputs
 
     def get_vision_text_model(self, vision_config, text_config):
+        # Run in eager mode if we are in slow mode
+        if _run_slow_tests:
+            vision_config._attn_implementation = "eager"
+
         vision_model = ViTModel(vision_config).eval()
         text_model = BertModel(text_config).eval()
         return vision_model, text_model
@@ -397,6 +401,10 @@ class DeiTRobertaModelTest(VisionTextDualEncoderMixin, unittest.TestCase):
         )
 
     def get_vision_text_model(self, vision_config, text_config):
+        # Run in eager mode if we are in slow mode
+        if _run_slow_tests:
+            vision_config._attn_implementation = "eager"
+
         vision_model = DeiTModel(vision_config).eval()
         text_model = RobertaModel(text_config).eval()
         return vision_model, text_model
