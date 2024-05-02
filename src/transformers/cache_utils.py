@@ -182,10 +182,10 @@ class DynamicCache(Cache):
     def reorder_cache(self, beam_idx: torch.LongTensor):
         """Reorders the cache for beam search, given the selected beam indices."""
         for layer_idx in range(len(self.key_cache)):
-            device = self.key_cache[layer_idx].device
-            self.key_cache[layer_idx] = self.key_cache[layer_idx].index_select(0, beam_idx.to(device))
-            device = self.value_cache[layer_idx].device
-            self.value_cache[layer_idx] = self.value_cache[layer_idx].index_select(0, beam_idx.to(device))
+            device = self.key_cache[layer_idx][0].device
+            self.key_cache[layer_idx] = [x.index_select(0, beam_idx.to(device)) for x in self.key_cache[layer_idx]]
+            device = self.value_cache[layer_idx][0].device
+            self.value_cache[layer_idx] = [x.index_select(0, beam_idx.to(device)) for x in self.value_cache[layer_idx]]
 
     def to_legacy_cache(self) -> Tuple[Tuple[torch.Tensor], Tuple[torch.Tensor]]:
         """Converts the `DynamicCache` instance into the its equivalent in the legacy cache format."""
