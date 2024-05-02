@@ -466,11 +466,15 @@ class TFVisionEncoderDecoderMixin:
         self.check_pt_tf_models(tf_model, pt_model, tf_inputs_dict)
 
     def check_pt_to_tf_equivalence(self, config, decoder_config, tf_inputs_dict):
+        if _run_slow_tests:
+            config._attn_implementation = "eager"
+            decoder_config._attn_implementation = "eager"
+
         encoder_decoder_config = VisionEncoderDecoderConfig.from_encoder_decoder_configs(config, decoder_config)
         # Output all for aggressive testing
         encoder_decoder_config.output_hidden_states = True
         # All models tested in this file have attentions
-        encoder_decoder_config.output_attentions = True
+        encoder_decoder_config.output_attentions = _run_slow_tests
 
         pt_model = VisionEncoderDecoderModel(encoder_decoder_config)
 
@@ -481,11 +485,17 @@ class TFVisionEncoderDecoderMixin:
         self.check_pt_tf_equivalence(tf_model, pt_model, tf_inputs_dict)
 
     def check_tf_to_pt_equivalence(self, config, decoder_config, tf_inputs_dict):
+        # When taking a model from tf we are using the default attention
+        # mode (sdpa) so we are not expecting attention
+        config_output_attention = config.output_attentions
+        config.output_attentions = False
+
         encoder_decoder_config = VisionEncoderDecoderConfig.from_encoder_decoder_configs(config, decoder_config)
+
         # Output all for aggressive testing
         encoder_decoder_config.output_hidden_states = True
         # TODO: A generalizable way to determine this attribute
-        encoder_decoder_config.output_attentions = True
+        encoder_decoder_config.output_attentions = False
 
         tf_model = TFVisionEncoderDecoderModel(encoder_decoder_config)
         # Make sure model is built before saving
@@ -496,6 +506,8 @@ class TFVisionEncoderDecoderMixin:
             pt_model = VisionEncoderDecoderModel.from_pretrained(tmpdirname, from_tf=True)
 
         self.check_pt_tf_equivalence(tf_model, pt_model, tf_inputs_dict)
+        # Revert mutable objet modification
+        config.output_attentions = config_output_attention
 
     def test_encoder_decoder_model(self):
         config_inputs_dict = self.prepare_config_and_inputs()

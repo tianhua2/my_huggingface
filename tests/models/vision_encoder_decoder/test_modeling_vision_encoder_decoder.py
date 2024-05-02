@@ -324,6 +324,7 @@ class EncoderDecoderMixin:
         input_ids_dict = self.prepare_config_and_inputs()
         self.check_save_and_load_encoder_decoder_model(**input_ids_dict)
 
+    @slow
     def test_encoder_decoder_model_output_attentions(self):
         input_ids_dict = self.prepare_config_and_inputs()
         self.check_encoder_decoder_model_output_attentions(**input_ids_dict)
@@ -412,9 +413,6 @@ class DeiT2RobertaModelTest(EncoderDecoderMixin, unittest.TestCase):
         pixel_values=None,
         **kwargs,
     ):
-        if not _run_slow_tests:
-            return
-
         # make the decoder inputs a different shape from the encoder inputs to harden the test
         decoder_input_ids = decoder_input_ids[:, :-1]
         decoder_attention_mask = decoder_attention_mask[:, :-1]
@@ -461,6 +459,8 @@ class DeiT2RobertaModelTest(EncoderDecoderMixin, unittest.TestCase):
         )
 
     def get_encoder_decoder_model(self, config, decoder_config):
+        if _run_slow_tests:
+            config._attn_implementation = "eager"
         encoder_model = DeiTModel(config).eval()
         decoder_model = BertLMHeadModel(decoder_config).eval()
         return encoder_model, decoder_model
@@ -526,6 +526,8 @@ class ViT2BertModelTest(EncoderDecoderMixin, unittest.TestCase):
         return model, inputs
 
     def get_encoder_decoder_model(self, config, decoder_config):
+        if _run_slow_tests:
+            config._attn_implementation = "eager"
         encoder_model = ViTModel(config).eval()
         decoder_model = BertLMHeadModel(decoder_config).eval()
         return encoder_model, decoder_model
@@ -564,29 +566,6 @@ class ViT2BertModelTest(EncoderDecoderMixin, unittest.TestCase):
             "decoder_choice_labels": decoder_choice_labels,
             "labels": decoder_token_labels,
         }
-
-    def check_encoder_decoder_model_output_attentions(
-        self,
-        config,
-        decoder_config,
-        decoder_input_ids,
-        decoder_attention_mask,
-        labels=None,
-        pixel_values=None,
-        **kwargs,
-    ):
-        if not _run_slow_tests:
-            return
-
-        super().check_encoder_decoder_model_output_attentions(
-            config,
-            decoder_config,
-            decoder_input_ids,
-            decoder_attention_mask,
-            labels=None,
-            pixel_values=None,
-            **kwargs,
-        )
 
 
 @require_torch
@@ -677,6 +656,8 @@ class Swin2BartModelTest(EncoderDecoderMixin, unittest.TestCase):
 @require_torch
 class ViT2TrOCR(EncoderDecoderMixin, unittest.TestCase):
     def get_encoder_decoder_model(self, config, decoder_config):
+        if _run_slow_tests:
+            config._attn_implementation = "eager"
         encoder_model = ViTModel(config).eval()
         decoder_model = TrOCRForCausalLM(decoder_config).eval()
         return encoder_model, decoder_model
@@ -703,29 +684,6 @@ class ViT2TrOCR(EncoderDecoderMixin, unittest.TestCase):
             "decoder_attention_mask": decoder_attention_mask,
             "labels": decoder_input_ids,
         }
-
-    def check_encoder_decoder_model_output_attentions(
-        self,
-        config,
-        decoder_config,
-        decoder_input_ids,
-        decoder_attention_mask,
-        labels=None,
-        pixel_values=None,
-        **kwargs,
-    ):
-        if not _run_slow_tests:
-            return
-
-        super().check_encoder_decoder_model_output_attentions(
-            config,
-            decoder_config,
-            decoder_input_ids,
-            decoder_attention_mask,
-            labels=None,
-            pixel_values=None,
-            **kwargs,
-        )
 
     # there are no published pretrained TrOCR checkpoints for now
     def test_real_model_save_load_from_pretrained(self):
