@@ -276,8 +276,11 @@ if is_torch_available():
             dataloaders = [super().get_train_dataloader(), super().get_train_dataloader()]
             return MultiLoader(dataloaders)
 
-        def get_eval_dataloader(self, eval_dataset):
-            dataloaders = [super().get_eval_dataloader(eval_dataset), super().get_eval_dataloader(eval_dataset)]
+        def get_eval_dataloader(self, eval_dataset, eval_dataset_name):
+            dataloaders = [
+                super().get_eval_dataloader(eval_dataset, eval_dataset_name),
+                super().get_eval_dataloader(eval_dataset, eval_dataset_name),
+            ]
             return MultiLoader(dataloaders)
 
     class RegressionModel(nn.Module):
