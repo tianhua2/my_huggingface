@@ -5014,10 +5014,22 @@ def _split(data, full_batch_size: int, split_size: int = None):
     elif isinstance(data, tuple):
         # If the elements of the tuple are also tuples (e.g., past_key_values in our earlier example)
         if isinstance(data[0], tuple):
-            return [
-                tuple(tuple(tensor[i : i + split_size] for tensor in inner_tuple) for inner_tuple in data)
-                for i in range(0, full_batch_size, split_size)
-            ]
+
+            # New cache format
+            if isinstance(data[0][0], list):
+                return [
+                    tuple(
+                        tuple(
+                            [tensor[i : i + split_size] for tensor in layer_list] for layer_list in inner_tuple)
+                            for inner_tuple in data)
+                    for i in range(0, full_batch_size, split_size)
+                ]
+            # Old cache format
+            else:
+                return [
+                    tuple(tuple(tensor[i : i + split_size] for tensor in inner_tuple) for inner_tuple in data)
+                    for i in range(0, full_batch_size, split_size)
+                ]
 
         else:
             return [
@@ -5117,10 +5129,22 @@ def stack_model_outputs(model_outputs: List[ModelOutput]) -> ModelOutput:
         elif isinstance(data[0], tuple):
             # If the elements of the tuple are also tuples (e.g., past_key_values in our earlier example)
             if isinstance(data[0][0], tuple):
-                return tuple(
-                    tuple(torch.cat([attr[i][j] for attr in data], dim=0) for j in range(len(data[0][0])))
-                    for i in range(len(data[0]))
-                )
+
+                # New cache format
+                if isinstance(data[0][0][0], list):
+                    return tuple(
+                        tuple(
+                            [
+                                torch.cat([attr[i][j][k] for attr in data], dim=0) for k in range(len(data[0][0][0]))
+                            ] for j in range(len(data[0][0])))
+                        for i in range(len(data[0]))
+                    )
+                # Old cache format
+                else:
+                    return tuple(
+                        tuple(torch.cat([attr[i][j] for attr in data], dim=0) for j in range(len(data[0][0])))
+                        for i in range(len(data[0]))
+                    )
             else:
                 return tuple(torch.cat([attr[i] for attr in data], dim=0) for i in range(len(data[0])))
         elif isinstance(data[0], (int, float)):
