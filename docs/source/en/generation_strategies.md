@@ -177,7 +177,7 @@ An increasing sequence: one, two, three, four, five, six, seven, eight, nine, te
 ## KV Cache Quantization
 
 The `generate()` method supports caching keys and values to enhance efficiency and avoid re-computations. However the key and value
-cache can occupy a large portion of memory becoming a bottleneck for long-context generatiomemory, especially for Large Language Models.
+cache can occupy a large portion of memory, becoming a bottleneck for long-context generation, especially for Large Language Models.
 Quantizing the cache when using `generate()` can significantly reduce memory demands in the cost of speed. 
 
 KV Cache quantization in `transformers` is largely inspired by the paper [KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache]
