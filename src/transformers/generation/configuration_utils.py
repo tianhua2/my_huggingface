@@ -1229,7 +1229,7 @@ class CacheConfig:
                     found_value=self.nbits,
                 ),
             )
-        if self.q_group_size < 0:
+        if self.q_group_size <= 0:
             raise ValueError(
                 incorrect_arg_msg.format(
                     key="q_group_size",
