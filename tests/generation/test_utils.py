@@ -1421,6 +1421,15 @@ class GenerationTesterMixin:
             past_kv = outputs["past_key_values"]
             self.assertEqual(len(past_kv), num_hidden_layers)
 
+            # New cache format (the easiest way to check consistency is to concatenate them to old format
+            # and then run old checks)
+            if isinstance(past_kv[0], tuple) and isinstance(past_kv[0][0], list):
+                past_kv = tuple(
+                    tuple(
+                        torch.cat(x, dim=-2) for x in inner_tuple
+                    ) for inner_tuple in past_kv
+                )
+
             # Encoder-Decoder checks
             if config.is_encoder_decoder:
                 encoder_num_attention_heads = config.encoder_attention_heads
@@ -1580,6 +1589,22 @@ class GenerationTesterMixin:
             self.assertListEqual(outputs.sequences.tolist(), outputs_cached.sequences.tolist())
             for layer_idx in range(len(outputs_cached.past_key_values)):
                 for kv_idx in range(len(outputs_cached.past_key_values[layer_idx])):
+
+                    # New cache format (the easiest way to check consistency is to concatenate them to old format
+                    # and then run old checks)
+                    if isinstance(outputs.past_key_values[0][0], list):
+                        outputs.past_key_values = tuple(
+                            tuple(
+                                torch.cat(x, dim=-2) for x in inner_tuple
+                            ) for inner_tuple in outputs.past_key_values
+                        )
+                    if isinstance(outputs_cached.past_key_values[0][0], list):
+                        outputs_cached.past_key_values = tuple(
+                            tuple(
+                                torch.cat(x, dim=-2) for x in inner_tuple
+                            ) for inner_tuple in outputs_cached.past_key_values
+                        )
+                    
                     self.assertTrue(
                         torch.allclose(
                             outputs.past_key_values[layer_idx][kv_idx],
@@ -1629,21 +1654,30 @@ class GenerationTesterMixin:
             new_cache_converted = new_results.past_key_values.to_legacy_cache()
             for layer_idx in range(len(legacy_cache)):
                 for kv_idx in range(len(legacy_cache[layer_idx])):
-                    self.assertTrue(
-                        torch.allclose(
-                            legacy_cache[layer_idx][kv_idx],
-                            new_cache_converted[layer_idx][kv_idx],
+                    for tensor_idx in range(len(legacy_cache[layer_idx][kv_idx])):
+                        self.assertTrue(
+                            torch.allclose(
+                                legacy_cache[layer_idx][kv_idx][tensor_idx],
+                                new_cache_converted[layer_idx][kv_idx][tensor_idx],
+                            )
                         )
-                    )
 
             new_cache = new_results.past_key_values
             legacy_cache_converted = DynamicCache.from_legacy_cache(legacy_results.past_key_values)
             for layer_idx in range(len(new_cache)):
-                for kv_idx in range(len(new_cache[layer_idx])):
+                for tensor_idx in range(len(legacy_cache[layer_idx][kv_idx])):
+                    # Keys
                     self.assertTrue(
                         torch.allclose(
-                            new_cache[layer_idx][kv_idx],
-                            legacy_cache_converted[layer_idx][kv_idx],
+                            new_cache.key_cache[layer_idx][tensor_idx],
+                            legacy_cache_converted.key_cache[layer_idx][tensor_idx],
+                        )
+                    )
+                    # Values
+                    self.assertTrue(
+                        torch.allclose(
+                            new_cache.value_cache[layer_idx][tensor_idx],
+                            legacy_cache_converted.value_cache[layer_idx][tensor_idx],
                         )
                     )
 
