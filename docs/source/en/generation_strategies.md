@@ -176,7 +176,7 @@ An increasing sequence: one, two, three, four, five, six, seven, eight, nine, te
 
 ## KV Cache Quantization
 
-The `generate()` supports caching keys and values to enhance efficieny and avoid re-computations. However the key and value
+The `generate()` method supports caching keys and values to enhance efficiency and avoid re-computations. However the key and value
 cache can occupy a large portion of memory becoming a bottleneck for long-context generatiomemory, especially for Large Language Models.
 Quantizing the cache when using `generate()` can significantly reduce memory demands in the cost of speed. 
 
