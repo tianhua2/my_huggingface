@@ -2142,6 +2142,9 @@ class GenerationMixin:
                 for item in layer:
                     # New cache structure
                     if isinstance(item, list):
+                        # Since we are allocating a whole new much bigger cache anyway, it's much more efficient
+                        # to cat() all the tensors in the older short cache before
+                        item = [torch.cat(item, dim=-2)]
                         if sequential:
                             items.append([x.repeat_interleave(1, dim=0) for x in item])
                         else:
