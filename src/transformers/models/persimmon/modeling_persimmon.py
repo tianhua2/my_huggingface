@@ -832,7 +832,7 @@ class PersimmonForCausalLM(PersimmonPreTrainedModel):
                 past_length = past_key_values.seen_tokens
                 max_cache_length = past_key_values.get_max_length()
             else:
-                cache_length = past_length = past_key_values[0][0].shape[2]
+                cache_length = past_length = sum(x.shape[-2] for x in past_key_values[0][0])
                 max_cache_length = None
 
             # Keep only the unprocessed tokens:
@@ -881,11 +881,12 @@ class PersimmonForCausalLM(PersimmonPreTrainedModel):
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
-        reordered_past = ()
-        for layer_past in past_key_values:
-            reordered_past += (
-                tuple(past_state.index_select(0, beam_idx.to(past_state.device)) for past_state in layer_past),
+        reordered_past = tuple(
+            (
+                [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[0]],
+                [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[1]],
             )
+            for layer_past in past_key_values)
         return reordered_past
 
 
