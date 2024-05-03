@@ -185,7 +185,6 @@ KV Cache quantization in `transformers` is largely inspired by the paper [KIVI: 
 
 To enable quantization of the key-value cache, one needs to indicate `cache_immplementation=True` in the `generation_config`.
 Quantization related arguments should be passed to the `generation_config` either as a `dict` or an instance of a `CacheConfig` class.
-It can be used with the recent generative models in `tranformers`. 
 
 
 <Tip warning={true}>
