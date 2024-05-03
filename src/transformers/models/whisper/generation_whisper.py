@@ -474,6 +474,15 @@ class WhisperGenerationMixin:
                 "The input name `inputs` is deprecated. Please make sure to use `input_features` instead.",
                 FutureWarning,
             )
+
+        if "assistant_model" in kwargs:
+            if kwargs["assistant_model"].config.encoder_attention_heads != self.model.config.encoder_attention_heads:
+                if not type(kwargs["assistant_model"]).__name__ == "WhisperForConditionalGeneration":
+                    raise ValueError(
+                        "The main model and the assistant don't have encoders of the same size.",
+                        "please load the assistant using WhisperForConditionalGeneration",
+                    )
+
         # 1. prepare generation config
         generation_config, kwargs = self._prepare_generation_config(generation_config, **kwargs)
 
