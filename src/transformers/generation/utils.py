@@ -2177,6 +2177,18 @@ class GenerationMixin:
                         output_hidden_states=True,
                         output_attentions=output_attentions,
                     )
+                    if isinstance(outputs['past_key_values'][0][0], list):
+                        # Remove past K-V from output since we don't need to stack later
+                        outputs['past_key_values'] = None
+                        
+                        # Remove last token from past K-V since we don't want to append it at this point
+                        model_kwargs['past_key_values'] = tuple(
+                            tuple(
+                                x[:-1] if x[-1].shape[-2] == 1 else x[:-1] + [x[-1][..., :-1, :]] for x in inner_tuple
+                                ) for inner_tuple in model_kwargs['past_key_values']
+                        )
+                        next_model_inputs['past_key_values'] = model_kwargs['past_key_values']
+
                     all_outputs.append(outputs)
                 outputs = stack_model_outputs(all_outputs)
 
