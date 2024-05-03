@@ -195,7 +195,7 @@ class QuantCache(Cache):
     It allows the model to generate longer sequence length without allocating much memory for Key and Value cache by applying quantization.
 
     The cache has two types of storage, one for full/half precision and one for the quantized cache. A `residual length` is set as a maximum capacity for
-    full/half precision cache. When the length goes beyong maximum capacity, fll/half precision cache is discarded and moved into quantized cache. The
+    full/half precision cache. When the length goes beyond maximum capacity, the full/half precision cache is discarded and moved into the quantized cache. The
     quantization is done per-channel with a set `q_group_size` for both Keys and Values, in contrast to what was described in the paper. Current implementation
     supports int2 and int4 cache.
 
