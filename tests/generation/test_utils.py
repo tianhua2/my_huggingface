@@ -1815,6 +1815,15 @@ class GenerationTesterMixin:
             [True] * len(past_key_values),
         )
 
+        # New cache format (the easiest way to check consistency is to concatenate them to old format
+        # and then run old checks)
+        if isinstance(past_key_values[0][0], list):
+            past_key_values = tuple(
+                tuple(
+                    torch.cat(x, dim=-2) for x in inner_tuple
+                ) for inner_tuple in past_key_values
+            )
+        
         # (batch, head, seq_length, head_features)
         expected_shape = (
             batch_size * num_beam_groups,
