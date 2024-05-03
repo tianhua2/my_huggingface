@@ -189,7 +189,7 @@ Quantization related arguments should be passed to the `generation_config` eithe
 
 <Tip warning={true}>
 
-The efficiency of cache quantization can be low if the context length is short and if enough GPU VRAM is availabel to run without quantization.
+Cache quantization can be detrimental if the context length is short and there is enough GPU VRAM available to run without cache quantization.
 
 </Tip>
 
