@@ -22,7 +22,6 @@ from dataclasses import is_dataclass
 from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 
 from .. import __version__
-from ..cache_utils import CacheConfig
 from ..configuration_utils import PretrainedConfig
 from ..utils import (
     GENERATION_CONFIG_NAME,
@@ -32,8 +31,13 @@ from ..utils import (
     download_url,
     extract_commit_hash,
     is_remote_url,
+    is_torch_available,
     logging,
 )
+
+
+if is_torch_available():
+    from ..cache_utils import CacheConfig
 
 
 if TYPE_CHECKING:
