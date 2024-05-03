@@ -18,7 +18,7 @@ from ..utils import OptionalDependencyNotAvailable, _LazyModule, is_flax_availab
 
 
 _import_structure = {
-    "configuration_utils": ["CacheConfig", "GenerationConfig", "GenerationMode"],
+    "configuration_utils": ["GenerationConfig", "GenerationMode"],
     "streamers": ["TextIteratorStreamer", "TextStreamer"],
 }
 
@@ -173,7 +173,7 @@ else:
     ]
 
 if TYPE_CHECKING:
-    from .configuration_utils import CacheConfig, GenerationConfig, GenerationMode
+    from .configuration_utils import GenerationConfig, GenerationMode
     from .streamers import TextIteratorStreamer, TextStreamer
 
     try:

@@ -183,9 +183,8 @@ Quantizing the cache when using `generate()` can significantly reduce memory req
 KV Cache quantization in `transformers` is largely inspired by the paper [KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache]
 (https://arxiv.org/abs/2402.02750). For more information on the inner workings see the paper.
 
-To enable quantization of the key-value cache, one needs to indicate `cache_immplementation=True` in the `generation_config`.
+To enable quantization of the key-value cache, one needs to indicate `cache_implementation="quantized"` in the `generation_config`.
 Quantization related arguments should be passed to the `generation_config` either as a `dict` or an instance of a `CacheConfig` class.
-
 
 <Tip warning={true}>
 

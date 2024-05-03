@@ -34,7 +34,7 @@ from ..models.auto import (
     MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING,
     MODEL_FOR_VISION_2_SEQ_MAPPING,
 )
-from ..utils import ModelOutput, is_accelerate_available, is_torchdynamo_compiling, logging
+from ..utils import ModelOutput, is_accelerate_available, is_quanto_available, is_torchdynamo_compiling, logging
 from .beam_constraints import DisjunctiveConstraint, PhrasalConstraint
 from .beam_search import BeamScorer, BeamSearchScorer, ConstrainedBeamSearchScorer
 from .candidate_generator import (
@@ -1548,6 +1548,12 @@ class GenerationMixin:
             if generation_config.cache_implementation == "static":
                 model_kwargs["past_key_values"] = self._get_static_cache(batch_size, generation_config.max_length)
             elif generation_config.cache_implementation == "quantized":
+                if not is_quanto_available():
+                    raise ImportError(
+                        "You need to install `quanto` in order to use KV cache quantization. "
+                        "Please install it via  with `pip install git+https://github.com/huggingface/quanto`"
+                    )
+
                 if model_kwargs.get("past_key_values") is not None:
                     if not isinstance(model_kwargs["past_key_values"], QuantCache):
                         raise ValueError(

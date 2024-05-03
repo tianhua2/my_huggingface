@@ -23,6 +23,13 @@ class Cache(metaclass=DummyObject):
         requires_backends(self, ["torch"])
 
 
+class CacheConfig(metaclass=DummyObject):
+    _backends = ["torch"]
+
+    def __init__(self, *args, **kwargs):
+        requires_backends(self, ["torch"])
+
+
 class DynamicCache(metaclass=DummyObject):
     _backends = ["torch"]
 

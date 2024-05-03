@@ -26,6 +26,7 @@ from transformers import is_torch_available, pipeline, set_seed
 from transformers.testing_utils import (
     is_flaky,
     require_accelerate,
+    require_quanto,
     require_torch,
     require_torch_multi_accelerator,
     slow,
@@ -1647,6 +1648,7 @@ class GenerationTesterMixin:
                         )
                     )
 
+    @require_quanto
     def test_generate_with_quant_cache(self):
         for model_class in self.all_generative_model_classes:
             if not model_class._supports_cache_class:

@@ -25,6 +25,7 @@ from transformers import LlamaConfig, is_torch_available, set_seed
 from transformers.testing_utils import (
     require_bitsandbytes,
     require_flash_attn,
+    require_quanto,
     require_read_token,
     require_torch,
     require_torch_accelerator,
@@ -741,6 +742,7 @@ class LlamaIntegrationTest(unittest.TestCase):
 
     @slow
     @require_torch_gpu
+    @require_quanto
     @require_read_token
     def test_quantized_cache(self):
         EXPECTED_TEXT_COMPLETION = [
