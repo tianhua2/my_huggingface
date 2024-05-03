@@ -2335,7 +2335,10 @@ class GenerationMixin:
                     layer_past_key_values = []
                     for item in layer:
                         if isinstance(item, list):
-                            layer_past_key_values.append([x[..., :-1, :] for x in item])
+                            if item[-1].shape[-2] == 1:
+                                layer_past_key_values.append(item[:-1])
+                            else:
+                                layer_past_key_values.append(item[:-1] + [item[-1][..., :-1, :]])
                         else:
                             layer_past_key_values.append(item[..., :-1, :])
                     past_key_values.append(tuple(layer_past_key_values))

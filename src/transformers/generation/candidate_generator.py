@@ -347,20 +347,20 @@ def _crop_past_key_values_new_format(past_key_values, maximum_length):
         
         for idx in range(len(past_key_values.key_cache)):
             cumulative_length = 0
-            total_tensors = 0
+            last = 0
             if past_key_values.value_cache[idx][0].shape[-1] != 0:
                 for tensor in past_key_values.key_cache[idx]:
                     current_length = tensor.shape[-2]
                     if cumulative_length + current_length < maximum_length:
-                        total_tensors += 1
+                        last += 1
                         cumulative_length += current_length
                     elif cumulative_length + current_length == maximum_length:
                         last_tensor_size = current_length
                     else:
                         last_tensor_size = maximum_length - cumulative_length
 
-            past_key_values.key_cache[idx] = [x for x in past_key_values.key_cache[idx][:total_tensors]] + [past_key_values.key_cache[idx][total_tensors][:, :, :last_tensor_size, :]]
-            past_key_values.value_cache[idx] = [x for x in past_key_values.value_cache[idx][:total_tensors]] + [past_key_values.value_cache[idx][total_tensors][:, :, :last_tensor_size, :]]
+            past_key_values.key_cache[idx] = past_key_values.key_cache[idx][:last] + [past_key_values.key_cache[idx][last][:, :, :last_tensor_size, :]]
+            past_key_values.value_cache[idx] = past_key_values.value_cache[idx][:last] + [past_key_values.value_cache[idx][last][:, :, :last_tensor_size, :]]
 
         return past_key_values
 
@@ -371,11 +371,12 @@ def _crop_past_key_values_new_format(past_key_values, maximum_length):
         new_past = []
         for idx in range(len(past_key_values)):
             cumulative_length = 0
-            total_tensors = 0
+            last = 0
+            last_tensor_size = 0
             for tensor in past_key_values[idx][0]:
                 current_length = tensor.shape[-2]
                 if cumulative_length + current_length <= maximum_length:
-                    total_tensors += 1
+                    last += 1
                     cumulative_length += current_length
                 elif cumulative_length + current_length == maximum_length:
                     last_tensor_size = current_length
@@ -384,8 +385,8 @@ def _crop_past_key_values_new_format(past_key_values, maximum_length):
 
             new_past.append(
                     (
-                        [x for x in past_key_values[idx][0][:total_tensors]] + [past_key_values[idx][0][total_tensors][:, :, :last_tensor_size, :]],
-                        [x for x in past_key_values[idx][1][:total_tensors]] + [past_key_values[idx][1][total_tensors][:, :, :last_tensor_size, :]],
+                        past_key_values[idx][0][:last] + [past_key_values[idx][0][last][:, :, :last_tensor_size, :]],
+                        past_key_values[idx][1][:last] + [past_key_values[idx][1][last][:, :, :last_tensor_size, :]],
                     )
                 )
             
