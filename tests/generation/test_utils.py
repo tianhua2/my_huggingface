@@ -1604,7 +1604,7 @@ class GenerationTesterMixin:
                                 torch.cat(x, dim=-2) for x in inner_tuple
                             ) for inner_tuple in outputs_cached.past_key_values
                         )
-                    
+
                     self.assertTrue(
                         torch.allclose(
                             outputs.past_key_values[layer_idx][kv_idx],
@@ -1857,7 +1857,7 @@ class GenerationTesterMixin:
                     torch.cat(x, dim=-2) for x in inner_tuple
                 ) for inner_tuple in past_key_values
             )
-        
+
         # (batch, head, seq_length, head_features)
         expected_shape = (
             batch_size * num_beam_groups,

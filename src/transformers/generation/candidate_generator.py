@@ -339,7 +339,7 @@ class PromptLookupCandidateGenerator(CandidateGenerator):
 
 def _crop_past_key_values_new_format(past_key_values, maximum_length):
     """Crops the past K-V in the case when they are in the new format Tuple[Tuple[List[Tensor]]].
-    It consists in taking the tensors in the list until we hit a size bigger than `maximum_length`, and then cropping 
+    It consists in taking the tensors in the list until we hit a size bigger than `maximum_length`, and then cropping
     one last tensor until `maximum_length`."""
     # Compatibility for HybridMambaAttentionDynamicCache which is a subclass of DynamicCache but still in the old format
     if isinstance(past_key_values, DynamicCache) and past_key_values.__class__.__name__ == "HybridMambaAttentionDynamicCache":
@@ -354,7 +354,7 @@ def _crop_past_key_values_new_format(past_key_values, maximum_length):
     elif isinstance(past_key_values, DynamicCache):
         if past_key_values.get_seq_length() <= maximum_length:
             return past_key_values
-        
+
         # Compute limits
         cumulative_length = 0
         last = 0
@@ -379,7 +379,7 @@ def _crop_past_key_values_new_format(past_key_values, maximum_length):
     elif isinstance(past_key_values[0][0], list):
         if sum(x.shape[-2] for x in past_key_values[0][0]) <= maximum_length:
             return past_key_values
-        
+
         new_past = []
         # Compute limits
         cumulative_length = 0
@@ -403,9 +403,9 @@ def _crop_past_key_values_new_format(past_key_values, maximum_length):
                 past_key_values[idx][1][:last] + [past_key_values[idx][1][last][:, :, :last_tensor_size, :]],
             ) for idx in range(len(past_key_values))
         )
-            
+
         return new_past
-    
+
 
 def _crop_past_key_values(model, past_key_values, maximum_length):
     """Crops the past key values up to a certain maximum length."""
