@@ -1424,11 +1424,7 @@ class GenerationTesterMixin:
             # New cache format (the easiest way to check consistency is to concatenate them to old format
             # and then run old checks)
             if isinstance(past_kv[0], tuple) and isinstance(past_kv[0][0], list):
-                past_kv = tuple(
-                    tuple(
-                        torch.cat(x, dim=-2) for x in inner_tuple
-                    ) for inner_tuple in past_kv
-                )
+                past_kv = tuple(tuple(torch.cat(x, dim=-2) for x in inner_tuple) for inner_tuple in past_kv)
 
             # Encoder-Decoder checks
             if config.is_encoder_decoder:
@@ -1589,20 +1585,16 @@ class GenerationTesterMixin:
             self.assertListEqual(outputs.sequences.tolist(), outputs_cached.sequences.tolist())
             for layer_idx in range(len(outputs_cached.past_key_values)):
                 for kv_idx in range(len(outputs_cached.past_key_values[layer_idx])):
-
                     # New cache format (the easiest way to check consistency is to concatenate them to old format
                     # and then run old checks)
                     if isinstance(outputs.past_key_values[0][0], list):
                         outputs.past_key_values = tuple(
-                            tuple(
-                                torch.cat(x, dim=-2) for x in inner_tuple
-                            ) for inner_tuple in outputs.past_key_values
+                            tuple(torch.cat(x, dim=-2) for x in inner_tuple) for inner_tuple in outputs.past_key_values
                         )
                     if isinstance(outputs_cached.past_key_values[0][0], list):
                         outputs_cached.past_key_values = tuple(
-                            tuple(
-                                torch.cat(x, dim=-2) for x in inner_tuple
-                            ) for inner_tuple in outputs_cached.past_key_values
+                            tuple(torch.cat(x, dim=-2) for x in inner_tuple)
+                            for inner_tuple in outputs_cached.past_key_values
                         )
 
                     self.assertTrue(
@@ -1853,9 +1845,7 @@ class GenerationTesterMixin:
         # and then run old checks)
         if isinstance(past_key_values[0][0], list):
             past_key_values = tuple(
-                tuple(
-                    torch.cat(x, dim=-2) for x in inner_tuple
-                ) for inner_tuple in past_key_values
+                tuple(torch.cat(x, dim=-2) for x in inner_tuple) for inner_tuple in past_key_values
             )
 
         # (batch, head, seq_length, head_features)

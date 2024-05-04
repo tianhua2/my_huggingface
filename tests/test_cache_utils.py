@@ -70,7 +70,9 @@ class CacheTest(unittest.TestCase):
 
         # Sanity check 2: we can get the sequence length in multiple ways with DynamicCache, and they return the
         # expected value
-        self.assertTrue(legacy_cache[0][0][0].shape[-2] == new_cache.key_cache[0][0].shape[-2] == new_cache.get_seq_length() == 8)
+        self.assertTrue(
+            legacy_cache[0][0][0].shape[-2] == new_cache.key_cache[0][0].shape[-2] == new_cache.get_seq_length() == 8
+        )
 
         # Sanity check 3: they must be equal
         for layer_idx in range(10):
@@ -79,7 +81,9 @@ class CacheTest(unittest.TestCase):
                     torch.allclose(new_cache.key_cache[layer_idx][tensor_idx], legacy_cache[layer_idx][0][tensor_idx])
                 )
                 self.assertTrue(
-                    torch.allclose(new_cache.value_cache[layer_idx][tensor_idx], legacy_cache[layer_idx][1][tensor_idx])
+                    torch.allclose(
+                        new_cache.value_cache[layer_idx][tensor_idx], legacy_cache[layer_idx][1][tensor_idx]
+                    )
                 )
 
         # Test 1: We can convert from legacy to new with no changes
@@ -87,10 +91,14 @@ class CacheTest(unittest.TestCase):
         for layer_idx in range(10):
             for tensor_idx in range(len(legacy_cache[layer_idx][0])):
                 self.assertTrue(
-                    torch.allclose(from_legacy.key_cache[layer_idx][tensor_idx], legacy_cache[layer_idx][0][tensor_idx])
+                    torch.allclose(
+                        from_legacy.key_cache[layer_idx][tensor_idx], legacy_cache[layer_idx][0][tensor_idx]
+                    )
                 )
                 self.assertTrue(
-                    torch.allclose(from_legacy.value_cache[layer_idx][tensor_idx], legacy_cache[layer_idx][1][tensor_idx])
+                    torch.allclose(
+                        from_legacy.value_cache[layer_idx][tensor_idx], legacy_cache[layer_idx][1][tensor_idx]
+                    )
                 )
 
         # Test 2: We can convert from new to legacy with no changes

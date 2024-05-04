@@ -2095,7 +2095,10 @@ class GenerationMixin:
                     )
                 elif (
                     not isinstance(past_key_values[0], (tuple, torch.Tensor))
-                    or (isinstance(past_key_values[0][0], torch.Tensor) and past_key_values[0][0].shape[0] != batch_size)
+                    or (
+                        isinstance(past_key_values[0][0], torch.Tensor)
+                        and past_key_values[0][0].shape[0] != batch_size
+                    )
                     or (isinstance(past_key_values[0][0], list) and past_key_values[0][0][0].shape[0] != batch_size)
                 ):
                     raise ValueError(
@@ -2131,7 +2134,6 @@ class GenerationMixin:
                         if self.config.is_encoder_decoder
                         else (outputs.hidden_states,)
                     )
-
 
             # Replicates the new past_key_values to match the `top_k` candidates
             new_key_values = []
@@ -2177,17 +2179,18 @@ class GenerationMixin:
                         output_hidden_states=True,
                         output_attentions=output_attentions,
                     )
-                    if isinstance(outputs['past_key_values'][0][0], list):
+                    if isinstance(outputs["past_key_values"][0][0], list):
                         # Remove past K-V from output since we don't need to stack later
-                        outputs['past_key_values'] = None
+                        outputs["past_key_values"] = None
 
                         # Remove last token from past K-V since we don't want to append it at this point
-                        model_kwargs['past_key_values'] = tuple(
+                        model_kwargs["past_key_values"] = tuple(
                             tuple(
                                 x[:-1] if x[-1].shape[-2] == 1 else x[:-1] + [x[-1][..., :-1, :]] for x in inner_tuple
-                                ) for inner_tuple in model_kwargs['past_key_values']
+                            )
+                            for inner_tuple in model_kwargs["past_key_values"]
                         )
-                        next_model_inputs['past_key_values'] = model_kwargs['past_key_values']
+                        next_model_inputs["past_key_values"] = model_kwargs["past_key_values"]
 
                     all_outputs.append(outputs)
                 outputs = stack_model_outputs(all_outputs)
@@ -2226,7 +2229,7 @@ class GenerationMixin:
             selected_idx = selected_idx.to("cpu")
 
             # This will be used instead of the previous inneficient torch.stack(torch.split())
-            augmented_idx = torch.tensor([x + i*top_k for i, x in enumerate(selected_idx)])
+            augmented_idx = torch.tensor([x + i * top_k for i, x in enumerate(selected_idx)])
 
             # prepare for the next step: (1) next token_id; (2) past_key_values; (3) last_hidden_states for computing
             # the degeneration penalty; (4) logits for selecting next top-k candidates; (5) selected tokens scores
@@ -5026,14 +5029,13 @@ def _split(data, full_batch_size: int, split_size: int = None):
     elif isinstance(data, tuple):
         # If the elements of the tuple are also tuples (e.g., past_key_values in our earlier example)
         if isinstance(data[0], tuple):
-
             # New cache format
             if isinstance(data[0][0], list):
                 return [
                     tuple(
-                        tuple(
-                            [tensor[i : i + split_size] for tensor in layer_list] for layer_list in inner_tuple)
-                            for inner_tuple in data)
+                        tuple([tensor[i : i + split_size] for tensor in layer_list] for layer_list in inner_tuple)
+                        for inner_tuple in data
+                    )
                     for i in range(0, full_batch_size, split_size)
                 ]
             # Old cache format
@@ -5141,14 +5143,13 @@ def stack_model_outputs(model_outputs: List[ModelOutput]) -> ModelOutput:
         elif isinstance(data[0], tuple):
             # If the elements of the tuple are also tuples (e.g., past_key_values in our earlier example)
             if isinstance(data[0][0], tuple):
-
                 # New cache format
                 if isinstance(data[0][0][0], list):
                     return tuple(
                         tuple(
-                            [
-                                torch.cat([attr[i][j][k] for attr in data], dim=0) for k in range(len(data[0][0][0]))
-                            ] for j in range(len(data[0][0])))
+                            [torch.cat([attr[i][j][k] for attr in data], dim=0) for k in range(len(data[0][0][0]))]
+                            for j in range(len(data[0][0]))
+                        )
                         for i in range(len(data[0]))
                     )
                 # Old cache format

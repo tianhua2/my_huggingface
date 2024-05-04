@@ -1959,5 +1959,6 @@ class Idefics2ForConditionalGeneration(Idefics2PreTrainedModel):
                 [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[0]],
                 [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[1]],
             )
-            for layer_past in past_key_values)
+            for layer_past in past_key_values
+        )
         return reordered_past

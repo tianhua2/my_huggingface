@@ -162,9 +162,13 @@ class DynamicCache(Cache):
             if x.shape[-2] == 1:
                 index = i
                 break
-        if index is not None and len(self.key_cache[layer_idx]) -1 - index > N:
-            self.key_cache[layer_idx] = self.key_cache[layer_idx][:index] + [torch.cat(self.key_cache[layer_idx][index:], dim=-2)]
-            self.value_cache[layer_idx] = self.value_cache[layer_idx][:index] + [torch.cat(self.value_cache[layer_idx][index:], dim=-2)]
+        if index is not None and len(self.key_cache[layer_idx]) - 1 - index > N:
+            self.key_cache[layer_idx] = self.key_cache[layer_idx][:index] + [
+                torch.cat(self.key_cache[layer_idx][index:], dim=-2)
+            ]
+            self.value_cache[layer_idx] = self.value_cache[layer_idx][:index] + [
+                torch.cat(self.value_cache[layer_idx][index:], dim=-2)
+            ]
 
         # Return cat()'ed tensors for use in attention layers
         return torch.cat(self.key_cache[layer_idx], dim=-2), torch.cat(self.value_cache[layer_idx], dim=-2)
@@ -183,7 +187,9 @@ class DynamicCache(Cache):
         """Reorders the cache for beam search, given the selected beam indices."""
         for layer_idx in range(len(self.key_cache)):
             self.key_cache[layer_idx] = [x.index_select(0, beam_idx.to(x.device)) for x in self.key_cache[layer_idx]]
-            self.value_cache[layer_idx] = [x.index_select(0, beam_idx.to(x.device)) for x in self.value_cache[layer_idx]]
+            self.value_cache[layer_idx] = [
+                x.index_select(0, beam_idx.to(x.device)) for x in self.value_cache[layer_idx]
+            ]
 
     def to_legacy_cache(self) -> Tuple[Tuple[torch.Tensor], Tuple[torch.Tensor]]:
         """Converts the `DynamicCache` instance into the its equivalent in the legacy cache format."""

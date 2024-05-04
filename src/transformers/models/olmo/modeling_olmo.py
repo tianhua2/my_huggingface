@@ -1093,9 +1093,9 @@ class OlmoModel(OlmoPreTrainedModel):
                     offset = 0
                 mask_shape = attention_mask.shape
                 mask_slice = (attention_mask.eq(0.0)).to(dtype=dtype) * min_dtype
-                causal_mask[
-                    : mask_shape[0], : mask_shape[1], offset : mask_shape[2] + offset, : mask_shape[3]
-                ] = mask_slice
+                causal_mask[: mask_shape[0], : mask_shape[1], offset : mask_shape[2] + offset, : mask_shape[3]] = (
+                    mask_slice
+                )
 
         if (
             self.config._attn_implementation == "sdpa"
@@ -1329,5 +1329,6 @@ class OlmoForCausalLM(OlmoPreTrainedModel):
                 [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[0]],
                 [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[1]],
             )
-            for layer_past in past_key_values)
+            for layer_past in past_key_values
+        )
         return reordered_past

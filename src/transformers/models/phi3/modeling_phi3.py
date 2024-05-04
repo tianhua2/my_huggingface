@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-""" PyTorch Phi-3 model."""
+"""PyTorch Phi-3 model."""
 
 import inspect
 import math
@@ -1378,7 +1378,8 @@ class Phi3ForCausalLM(Phi3PreTrainedModel):
                 [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[0]],
                 [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[1]],
             )
-            for layer_past in past_key_values)
+            for layer_past in past_key_values
+        )
         return reordered_past
 
 

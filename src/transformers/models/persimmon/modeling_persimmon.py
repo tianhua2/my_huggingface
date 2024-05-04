@@ -17,7 +17,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" PyTorch Persimmon model."""
+"""PyTorch Persimmon model."""
+
 import math
 from typing import List, Optional, Tuple, Union
 
@@ -886,7 +887,8 @@ class PersimmonForCausalLM(PersimmonPreTrainedModel):
                 [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[0]],
                 [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[1]],
             )
-            for layer_past in past_key_values)
+            for layer_past in past_key_values
+        )
         return reordered_past
 
 

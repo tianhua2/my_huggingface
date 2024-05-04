@@ -342,7 +342,10 @@ def _crop_past_key_values_new_format(past_key_values, maximum_length):
     It consists in taking the tensors in the list until we hit a size bigger than `maximum_length`, and then cropping
     one last tensor until `maximum_length`."""
     # Compatibility for HybridMambaAttentionDynamicCache which is a subclass of DynamicCache but still in the old format
-    if isinstance(past_key_values, DynamicCache) and past_key_values.__class__.__name__ == "HybridMambaAttentionDynamicCache":
+    if (
+        isinstance(past_key_values, DynamicCache)
+        and past_key_values.__class__.__name__ == "HybridMambaAttentionDynamicCache"
+    ):
         for idx in range(len(past_key_values.key_cache)):
             if past_key_values.value_cache[idx].shape[-1] != 0:
                 past_key_values.key_cache[idx] = past_key_values.key_cache[idx][:, :, :maximum_length, :]
@@ -371,8 +374,12 @@ def _crop_past_key_values_new_format(past_key_values, maximum_length):
                 break
 
         for idx in range(len(past_key_values.key_cache)):
-            past_key_values.key_cache[idx] = past_key_values.key_cache[idx][:last] + [past_key_values.key_cache[idx][last][:, :, :last_tensor_size, :]]
-            past_key_values.value_cache[idx] = past_key_values.value_cache[idx][:last] + [past_key_values.value_cache[idx][last][:, :, :last_tensor_size, :]]
+            past_key_values.key_cache[idx] = past_key_values.key_cache[idx][:last] + [
+                past_key_values.key_cache[idx][last][:, :, :last_tensor_size, :]
+            ]
+            past_key_values.value_cache[idx] = past_key_values.value_cache[idx][:last] + [
+                past_key_values.value_cache[idx][last][:, :, :last_tensor_size, :]
+            ]
 
         return past_key_values
 
@@ -401,7 +408,8 @@ def _crop_past_key_values_new_format(past_key_values, maximum_length):
             (
                 past_key_values[idx][0][:last] + [past_key_values[idx][0][last][:, :, :last_tensor_size, :]],
                 past_key_values[idx][1][:last] + [past_key_values[idx][1][last][:, :, :last_tensor_size, :]],
-            ) for idx in range(len(past_key_values))
+            )
+            for idx in range(len(past_key_values))
         )
 
         return new_past

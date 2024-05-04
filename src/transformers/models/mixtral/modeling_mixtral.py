@@ -17,7 +17,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" PyTorch Mixtral model."""
+"""PyTorch Mixtral model."""
+
 import inspect
 import math
 import warnings
@@ -1484,7 +1485,8 @@ class MixtralForCausalLM(MixtralPreTrainedModel):
                 [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[0]],
                 [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[1]],
             )
-            for layer_past in past_key_values)
+            for layer_past in past_key_values
+        )
         return reordered_past
 
 
