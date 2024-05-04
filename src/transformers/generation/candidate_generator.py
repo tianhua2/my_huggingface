@@ -348,6 +348,9 @@ def _crop_past_key_values_new_format(past_key_values, maximum_length):
                 past_key_values.key_cache[idx] = past_key_values.key_cache[idx][:, :, :maximum_length, :]
                 past_key_values.value_cache[idx] = past_key_values.value_cache[idx][:, :, :maximum_length, :]
 
+        return past_key_values
+
+    # Usual DynamicCache
     elif isinstance(past_key_values, DynamicCache):
         if past_key_values.get_seq_length() <= maximum_length:
             return past_key_values

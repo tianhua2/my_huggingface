@@ -77,13 +77,13 @@ class DynamicCache(Cache):
     """
     A cache that grows dynamically as more tokens are generated. This is the default for generative models.
 
-    It stores the Key and Value states as a list of tensors, one for each layer. The expected shape for each tensor is
+    It stores the Key and Value states as a list of list of tensors, one for each layer. The expected shape for each tensor is
     `[batch_size, num_heads, seq_len, head_dim]`.
     """
 
     def __init__(self) -> None:
-        self.key_cache: List[torch.Tensor] = []
-        self.value_cache: List[torch.Tensor] = []
+        self.key_cache: List[List[torch.Tensor]] = []
+        self.value_cache: List[List[torch.Tensor]] = []
         self._seen_tokens = 0  # Used in `generate` to keep tally of how many tokens the cache has seen
 
     def __getitem__(self, layer_idx: int) -> List[Tuple[torch.Tensor]]:
