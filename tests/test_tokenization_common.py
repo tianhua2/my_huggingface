@@ -1155,6 +1155,86 @@ class TokenizerTesterMixin:
                 )  # Check that no error raised
 
     @require_jinja
+    def test_chat_template_return_mask(self):
+        template = (
+            "{% for message in messages %}"
+            "{% if (message['role'] != 'assistant') %}"
+            "{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}"
+            "{% elif (message['role'] == 'assistant')%}"
+            "{{'<|im_start|>' + message['role'] + '\n'}}"
+            "{% generation %}"
+            "{{message['content'] + '<|im_end|>'}}"
+            "{% endgeneration %}"
+            "{{'\n'}}"
+            "{% endif %}"
+            "{% endfor %}"
+        )
+        conversations = [
+            [
+                {"role": "system", "content": "system message"},
+                {"role": "user", "content": "user message"},
+                {"role": "assistant", "content": "assistant message"},
+                {"role": "user", "content": "user message 2"},
+                {"role": "assistant", "content": "assistant message 2"},
+            ],
+            [
+                {"role": "system", "content": "system message 3"},
+                {"role": "user", "content": "user message 3"},
+                {"role": "assistant", "content": "assistant message 3"},
+                {"role": "user", "content": "user message 4"},
+                {"role": "assistant", "content": "assistant message 4"},
+            ],
+        ]
+        for tokenizer, pretrained_name, kwargs in self.tokenizers_list:
+            with self.subTest(f"{tokenizer.__class__.__name__} ({pretrained_name})"):
+                if self.test_rust_tokenizer:
+                    tokenizer_r = self.rust_tokenizer_class.from_pretrained(
+                        pretrained_name, padding_side="left", **kwargs
+                    )
+
+                    # check batched
+                    output = tokenizer_r.apply_chat_template(
+                        conversations,
+                        chat_template=template,
+                        tokenize=True,
+                        return_assistant_mask=True,
+                        return_dict=True,
+                    )
+                    for i, conv in enumerate(conversations):
+                        labels = [
+                            output["input_ids"][i][index] if mask == 1 else -100
+                            for index, mask in enumerate(output["assistant_mask"][i])
+                        ]
+                        expected = [
+                            tokenizer_r(f"{m['content']+'<|im_end|>'}", add_special_tokens=False)["input_ids"]
+                            for m in conv
+                            if m["role"] == "assistant"
+                        ]
+                        expected = expected[0] + expected[1]
+                        self.assertEqual([t for t in labels if t != -100], expected)
+
+                    # check not batched
+                    output = tokenizer_r.apply_chat_template(
+                        conversations[0],
+                        chat_template=template,
+                        tokenize=True,
+                        return_assistant_mask=True,
+                        return_dict=True,
+                    )
+
+                    labels = [
+                        output["input_ids"][index] if mask == 1 else -100
+                        for index, mask in enumerate(output["assistant_mask"])
+                    ]
+                    expected = [
+                        tokenizer_r(f"{m['content']+'<|im_end|>'}", add_special_tokens=False)["input_ids"]
+                        for m in conversations[0]
+                        if m["role"] == "assistant"
+                    ]
+                    expected = expected[0] + expected[1]
+                    self.assertEqual([t for t in labels if t != -100], expected)
+
+    @require_jinja
     def test_chat_template_dict(self):
         dummy_template_1 = "{{'a'}}"
         dummy_template_2 = "{{'b'}}"
