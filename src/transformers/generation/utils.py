@@ -123,11 +123,11 @@ class GenerateDecoderOnlyOutput(ModelOutput):
         hidden_states (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `torch.FloatTensor` of shape `(batch_size, generated_length, hidden_size)`.
-        past_key_values (`tuple(tuple(torch.FloatTensor)))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`tuple(tuple(list(torch.FloatTensor))))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
             NOTE: some models have a different `past_key_values` format, confirm with the model's documentation.
-            Usually a Tuple (one element for each layer of the decoder) of tuples (two elements, key tensor and value
-            tensor). The first Tuple is of length `config.n_layers`, with each tuple having 2 tensors of shape
-            `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and optionally if
+            Usually a Tuple (one element for each layer of the decoder) of tuples (two elements, list of key tensors and list of value
+            tensors). The first Tuple is of length `config.n_layers`, with each tuple having 2 lists of tensors of shape
+            `(batch_size, num_heads, X, embed_size_per_head)`) such that the sum of Xs accross each list satisfy sum(X) = sequence_length, and optionally if
             `config.is_encoder_decoder=True` 2 additional tensors of shape `(batch_size, num_heads,
             encoder_sequence_length, embed_size_per_head)`.
     """
@@ -137,7 +137,7 @@ class GenerateDecoderOnlyOutput(ModelOutput):
     logits: Optional[Tuple[torch.FloatTensor]] = None
     attentions: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
     hidden_states: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
-    past_key_values: Optional[Tuple[Tuple[Tuple[torch.FloatTensor]]]] = None
+    past_key_values: Optional[Tuple[Tuple[List[torch.FloatTensor]]]] = None
 
 
 @dataclass
@@ -172,11 +172,11 @@ class GenerateEncoderDecoderOutput(ModelOutput):
         decoder_hidden_states (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `torch.FloatTensor` of shape `(batch_size, generated_length, hidden_size)`.
-        past_key_values (`tuple(tuple(torch.FloatTensor)))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`tuple(tuple(list(torch.FloatTensor))))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
             NOTE: some models have a different `past_key_values` format, confirm with the model's documentation.
-            Usually a Tuple (one element for each layer of the decoder) of tuples (two elements, key tensor and value
-            tensor). The first Tuple is of length `config.n_layers`, with each tuple having 2 tensors of shape
-            `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and optionally if
+            Usually a Tuple (one element for each layer of the decoder) of tuples (two elements, list of key tensors and list of value
+            tensors). The first Tuple is of length `config.n_layers`, with each tuple having 2 lists of tensors of shape
+            `(batch_size, num_heads, X, embed_size_per_head)`) such that the sum of Xs accross each list satisfy sum(X) = sequence_length, and optionally if
             `config.is_encoder_decoder=True` 2 additional tensors of shape `(batch_size, num_heads,
             encoder_sequence_length, embed_size_per_head)`.
     """
@@ -189,7 +189,7 @@ class GenerateEncoderDecoderOutput(ModelOutput):
     decoder_attentions: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
     cross_attentions: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
     decoder_hidden_states: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
-    past_key_values: Optional[Tuple[Tuple[Tuple[torch.FloatTensor]]]] = None
+    past_key_values: Optional[Tuple[Tuple[List[torch.FloatTensor]]]] = None
 
 
 @dataclass
@@ -221,11 +221,11 @@ class GenerateBeamDecoderOnlyOutput(ModelOutput):
         hidden_states (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `torch.FloatTensor` of shape `(batch_size*num_beams*num_return_sequences, generated_length, hidden_size)`.
-        past_key_values (`tuple(tuple(torch.FloatTensor)))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`tuple(tuple(list(torch.FloatTensor))))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
             NOTE: some models have a different `past_key_values` format, confirm with the model's documentation.
-            Usually a Tuple (one element for each layer of the decoder) of tuples (two elements, key tensor and value
-            tensor). The first Tuple is of length `config.n_layers`, with each tuple having 2 tensors of shape
-            `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and optionally if
+            Usually a Tuple (one element for each layer of the decoder) of tuples (two elements, list of key tensors and list of value
+            tensors). The first Tuple is of length `config.n_layers`, with each tuple having 2 lists of tensors of shape
+            `(batch_size, num_heads, X, embed_size_per_head)`) such that the sum of Xs accross each list satisfy sum(X) = sequence_length, and optionally if
             `config.is_encoder_decoder=True` 2 additional tensors of shape `(batch_size, num_heads,
             encoder_sequence_length, embed_size_per_head)`.
     """
@@ -237,7 +237,7 @@ class GenerateBeamDecoderOnlyOutput(ModelOutput):
     beam_indices: Optional[torch.LongTensor] = None
     attentions: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
     hidden_states: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
-    past_key_values: Optional[Tuple[Tuple[Tuple[torch.FloatTensor]]]] = None
+    past_key_values: Optional[Tuple[Tuple[List[torch.FloatTensor]]]] = None
 
 
 @dataclass
@@ -279,11 +279,11 @@ class GenerateBeamEncoderDecoderOutput(ModelOutput):
         decoder_hidden_states (`tuple(tuple(torch.FloatTensor))`, *optional*, returned when `output_hidden_states=True` is passed or when `config.output_hidden_states=True`):
             Tuple (one element for each generated token) of tuples (one element for each layer of the decoder) of
             `torch.FloatTensor` of shape `(batch_size*num_beams*num_return_sequences, generated_length, hidden_size)`.
-        past_key_values (`tuple(tuple(torch.FloatTensor)))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
+        past_key_values (`tuple(tuple(list(torch.FloatTensor))))`, *optional*, returned when `use_cache=True` is passed or when `config.use_cache=True`):
             NOTE: some models have a different `past_key_values` format, confirm with the model's documentation.
-            Usually a Tuple (one element for each layer of the decoder) of tuples (two elements, key tensor and value
-            tensor). The first Tuple is of length `config.n_layers`, with each tuple having 2 tensors of shape
-            `(batch_size, num_heads, sequence_length, embed_size_per_head)`) and optionally if
+            Usually a Tuple (one element for each layer of the decoder) of tuples (two elements, list of key tensors and list of value
+            tensors). The first Tuple is of length `config.n_layers`, with each tuple having 2 lists of tensors of shape
+            `(batch_size, num_heads, X, embed_size_per_head)`) such that the sum of Xs accross each list satisfy sum(X) = sequence_length, and optionally if
             `config.is_encoder_decoder=True` 2 additional tensors of shape `(batch_size, num_heads,
             encoder_sequence_length, embed_size_per_head)`.
     """
@@ -298,7 +298,7 @@ class GenerateBeamEncoderDecoderOutput(ModelOutput):
     decoder_attentions: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
     cross_attentions: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
     decoder_hidden_states: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
-    past_key_values: Optional[Tuple[Tuple[Tuple[torch.FloatTensor]]]] = None
+    past_key_values: Optional[Tuple[Tuple[List[torch.FloatTensor]]]] = None
 
 
 # Equivalent classes (kept for retrocompatibility purposes)
