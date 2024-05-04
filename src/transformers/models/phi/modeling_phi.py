@@ -1264,8 +1264,8 @@ class PhiForCausalLM(PhiPreTrainedModel):
         )
         return model_inputs
 
-    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM._reorder_cache
     @staticmethod
+    # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM._reorder_cache
     def _reorder_cache(past_key_values, beam_idx):
         reordered_past = tuple(
             (

@@ -76,10 +76,10 @@ class CacheTest(unittest.TestCase):
         for layer_idx in range(10):
             for tensor_idx in range(len(legacy_cache[layer_idx][0])):
                 self.assertTrue(
-                    torch.allclose(new_cache.key_cache[layer_idx][tensor_idx], legacy_cache[layer_idx][0][tensor_idx]) 
+                    torch.allclose(new_cache.key_cache[layer_idx][tensor_idx], legacy_cache[layer_idx][0][tensor_idx])
                 )
                 self.assertTrue(
-                    torch.allclose(new_cache.value_cache[layer_idx][tensor_idx], legacy_cache[layer_idx][1][tensor_idx]) 
+                    torch.allclose(new_cache.value_cache[layer_idx][tensor_idx], legacy_cache[layer_idx][1][tensor_idx])
                 )
 
         # Test 1: We can convert from legacy to new with no changes
