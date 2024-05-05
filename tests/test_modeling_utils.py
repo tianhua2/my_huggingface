@@ -26,6 +26,7 @@ import unittest.mock as mock
 import uuid
 from pathlib import Path
 
+import psutil
 import requests
 from huggingface_hub import HfApi, HfFolder, delete_repo
 from pytest import mark
@@ -963,6 +964,49 @@ class ModelUtilsTest(TestCasePlus):
             _ = BertModel.from_pretrained("hf-internal-testing/tiny-random-bert")
             # This check we did call the fake head request
             mock_head.assert_called()
+
+    @require_accelerate
+    @mark.accelerate_tests
+    @require_torch_accelerator
+    def test_save_offloaded_model(self):
+        device_map = {
+            "transformer.wte": 0,
+            "transformer.wpe": 0,
+            "transformer.h.0": "cpu",
+            "transformer.h.1": "cpu",
+            "transformer.h.2": "cpu",
+            "transformer.h.3": "disk",
+            "transformer.h.4": "disk",
+            "transformer.ln_f": 0,
+            "lm_head": 0,
+        }
+
+        # check_models_equal requires onloaded tensors
+        model_id = "hf-internal-testing/tiny-random-gpt2"
+        onloaded_model = AutoModelForCausalLM.from_pretrained(model_id, device_map="cpu")
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+        input_tokens = tokenizer.encode("Four score and seven years ago", return_tensors="pt")
+        cpu_output = onloaded_model(input_tokens)[0]
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            offload_folder = os.path.join(tmp_dir, "offload")
+            offloaded_model = AutoModelForCausalLM.from_pretrained(
+                model_id, device_map=device_map, offload_folder=offload_folder
+            )
+            presaved_output = offloaded_model(input_tokens)[0]
+            presaved_memory = psutil.virtual_memory().used
+            offloaded_model.save_pretrained(
+                tmp_dir, max_shard_size="200KB"
+            )  # model is 1.6MB, max shard size is allocated to cpu by default
+            postsaved_memory = psutil.virtual_memory().used
+            saved_model = AutoModelForCausalLM.from_pretrained(tmp_dir, device_map=device_map)
+            postsaved_output = saved_model(input_tokens)[0]
+
+        self.assertTrue(
+            postsaved_memory - presaved_memory < 7e5
+        )  # shard size (2e5) plus buffer (~4e5), will fail if shard is too large
+        self.assertTrue(torch.allclose(cpu_output, presaved_output, atol=1e-4))
+        self.assertTrue(torch.allclose(presaved_output, postsaved_output))
 
     @require_safetensors
     def test_use_safetensors(self):
