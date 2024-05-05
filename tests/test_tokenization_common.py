@@ -1156,7 +1156,7 @@ class TokenizerTesterMixin:
 
     @require_jinja
     def test_chat_template_return_mask(self):
-        template = (
+        dummy_template = (
             "{% for message in messages %}"
             "{% if (message['role'] != 'assistant') %}"
             "{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}"
@@ -1185,17 +1185,15 @@ class TokenizerTesterMixin:
                 {"role": "assistant", "content": "assistant message 4"},
             ],
         ]
-        for tokenizer, pretrained_name, kwargs in self.tokenizers_list:
+        for tokenizer, pretrained_name, _ in self.tokenizers_list:
             with self.subTest(f"{tokenizer.__class__.__name__} ({pretrained_name})"):
                 if self.test_rust_tokenizer:
-                    tokenizer_r = self.rust_tokenizer_class.from_pretrained(
-                        pretrained_name, padding_side="left", **kwargs
-                    )
+                    tokenizer_r = self.rust_tokenizer_class.from_pretrained(pretrained_name)
 
                     # check batched
                     output = tokenizer_r.apply_chat_template(
                         conversations,
-                        chat_template=template,
+                        chat_template=dummy_template,
                         tokenize=True,
                         return_assistant_mask=True,
                         return_dict=True,
@@ -1216,7 +1214,7 @@ class TokenizerTesterMixin:
                     # check not batched
                     output = tokenizer_r.apply_chat_template(
                         conversations[0],
-                        chat_template=template,
+                        chat_template=dummy_template,
                         tokenize=True,
                         return_assistant_mask=True,
                         return_dict=True,
