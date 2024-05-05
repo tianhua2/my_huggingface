@@ -23,7 +23,7 @@ import numpy as np
 
 from transformers import ViTMAEConfig
 from transformers.testing_utils import require_torch, require_vision, slow, torch_device
-from transformers.utils import cached_property, is_torch_available, is_vision_available
+from transformers.utils import is_torch_available, is_vision_available
 
 from ...test_configuration_common import ConfigTester
 from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
@@ -289,10 +289,6 @@ def prepare_img():
 @require_torch
 @require_vision
 class ViTMAEModelIntegrationTest(unittest.TestCase):
-    @cached_property
-    def default_image_processor(self):
-        return ViTImageProcessor.from_pretrained("facebook/vit-mae-base") if is_vision_available() else None
-
     @slow
     def test_inference_for_pretraining(self):
         # make random mask reproducible across the PT and TF model
@@ -300,7 +296,7 @@ class ViTMAEModelIntegrationTest(unittest.TestCase):
 
         model = ViTMAEForPreTraining.from_pretrained("facebook/vit-mae-base").to(torch_device)
 
-        image_processor = self.default_image_processor
+        image_processor = ViTImageProcessor.from_pretrained("facebook/vit-mae-base") if is_vision_available() else None
         image = prepare_img()
         inputs = image_processor(images=image, return_tensors="pt").to(torch_device)
 
@@ -320,6 +316,48 @@ class ViTMAEModelIntegrationTest(unittest.TestCase):
 
         expected_slice = torch.tensor(
             [[-0.0548, -1.7023, -0.9325], [0.3721, -0.5670, -0.2233], [0.8235, -1.3878, -0.3524]]
+        )
+
+        self.assertTrue(torch.allclose(outputs.logits[0, :3, :3], expected_slice.to(torch_device), atol=1e-4))
+
+    @slow
+    def test_inference_interpolate_pos_encoding(self):
+        # ViTMAE models have an `interpolate_pos_encoding` argument in their forward method,
+        # allowing to interpolate the pre-trained position embeddings in order to use
+        # the model on higher resolutions. The DINO model by Facebook AI leverages this
+        # to visualize self-attention on higher resolution images.
+
+        # make random mask reproducible across the PT and TF model
+        np.random.seed(2)
+
+        model = ViTMAEForPreTraining.from_pretrained("facebook/vit-mae-base").to(torch_device)
+
+        image_processor = (
+            ViTImageProcessor.from_pretrained("facebook/vit-mae-base", do_resize=False)
+            if is_vision_available()
+            else None
+        )
+        image = prepare_img()
+        inputs = image_processor(images=image, return_tensors="pt").to(torch_device)
+
+        # prepare a noise vector that will be also used for testing the TF model
+        # (this way we can ensure that the PT and TF models operate on the same inputs)
+        vit_mae_config = ViTMAEConfig()
+        num_patches = (image.height // vit_mae_config.patch_size) * (image.width // vit_mae_config.patch_size)
+        noise = np.random.uniform(size=(1, num_patches))
+
+        # forward pass
+        with torch.no_grad():
+            outputs = model(
+                **inputs, noise=torch.from_numpy(noise).to(device=torch_device), interpolate_pos_encoding=True
+            )
+
+        # verify the logits
+        expected_shape = torch.Size((1, 1200, 768))
+        self.assertEqual(outputs.logits.shape, expected_shape)
+
+        expected_slice = torch.tensor(
+            [[0.5008, -1.5154, -0.5174], [0.2190, -0.8056, -0.3583], [0.6345, -1.4876, -0.4312]]
         )
 
         self.assertTrue(torch.allclose(outputs.logits[0, :3, :3], expected_slice.to(torch_device), atol=1e-4))
