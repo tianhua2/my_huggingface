@@ -1247,11 +1247,10 @@ class Starcoder2ForCausalLM(Starcoder2PreTrainedModel):
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):
+        # Because index_select() performs a copy anyway, but is inefficient to run for each tensor in the list,
+        # we first cat() the tensors and then index_select(). This keeps the same memory footprint, but is much faster
         reordered_past = tuple(
-            (
-                [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[0]],
-                [x.index_select(0, beam_idx.to(x.device)) for x in layer_past[1]],
-            )
+            tuple([torch.cat(state, dim=-2).index_select(0, beam_idx.to(state[0].device))] for state in layer_past)
             for layer_past in past_key_values
         )
         return reordered_past

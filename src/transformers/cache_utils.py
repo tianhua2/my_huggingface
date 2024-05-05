@@ -185,10 +185,18 @@ class DynamicCache(Cache):
 
     def reorder_cache(self, beam_idx: torch.LongTensor):
         """Reorders the cache for beam search, given the selected beam indices."""
+        # Because index_select() performs a copy anyway, but is inefficient to run for each tensor in the list,
+        # we first cat() the tensors and then index_select(). This keeps the same memory footprint, but is much faster
         for layer_idx in range(len(self.key_cache)):
-            self.key_cache[layer_idx] = [x.index_select(0, beam_idx.to(x.device)) for x in self.key_cache[layer_idx]]
+            self.key_cache[layer_idx] = [
+                torch.cat(self.key_cache[layer_idx], dim=-2).index_select(
+                    0, beam_idx.to(self.key_cache[layer_idx][0].device)
+                )
+            ]
             self.value_cache[layer_idx] = [
-                x.index_select(0, beam_idx.to(x.device)) for x in self.value_cache[layer_idx]
+                torch.cat(self.value_cache[layer_idx], dim=-2).index_select(
+                    0, beam_idx.to(self.value_cache[layer_idx][0].device)
+                )
             ]
 
     def to_legacy_cache(self) -> Tuple[Tuple[torch.Tensor], Tuple[torch.Tensor]]:
