@@ -1173,17 +1173,21 @@ class TokenizerTesterMixin:
             [
                 {"role": "system", "content": "system message"},
                 {"role": "user", "content": "user message"},
-                {"role": "assistant", "content": "assistant message"},
+                {"role": "assistant", "content": "<start> assistant message 5"},
                 {"role": "user", "content": "user message 2"},
-                {"role": "assistant", "content": "assistant message 2"},
+                {"role": "assistant", "content": "<start2> assistant message 6"},
             ],
             [
                 {"role": "system", "content": "system message 3"},
                 {"role": "user", "content": "user message 3"},
-                {"role": "assistant", "content": "assistant message 3"},
+                {"role": "assistant", "content": "<start3> assistant message 3 7"},
                 {"role": "user", "content": "user message 4"},
-                {"role": "assistant", "content": "assistant message 4"},
+                {"role": "assistant", "content": "<start4> assistant message 4 8"},
             ],
+        ]
+        assistant_wrappers = [
+            [("<start>", "5<|im_end|>"), ("<start2>", "6<|im_end|>")],
+            [("<start3>", "7<|im_end|>"), ("<start4>", "8<|im_end|>")],
         ]
         for tokenizer, pretrained_name, _ in self.tokenizers_list:
             with self.subTest(f"{tokenizer.__class__.__name__} ({pretrained_name})"):
@@ -1203,13 +1207,24 @@ class TokenizerTesterMixin:
                             output["input_ids"][i][index] if mask == 1 else -100
                             for index, mask in enumerate(output["assistant_mask"][i])
                         ]
-                        expected = [
-                            tokenizer_r(f"{m['content']+'<|im_end|>'}", add_special_tokens=False)["input_ids"]
-                            for m in conv
-                            if m["role"] == "assistant"
-                        ]
-                        expected = expected[0] + expected[1]
-                        self.assertEqual([t for t in labels if t != -100], expected)
+
+                        chat_string = tokenizer_r.apply_chat_template(conversations[i], tokenize=False,chat_template=dummy_template)
+                        assistant_start = output.char_to_token(i, chat_string.index(assistant_wrappers[i][0][0]))
+                        assistant_end = output.char_to_token(
+                            i, chat_string.index(assistant_wrappers[i][0][1]) + len(assistant_wrappers[i][0][1]) - 1
+                        )
+
+                        assistant_start2 = output.char_to_token(i, chat_string.index(assistant_wrappers[i][1][0]))
+                        assistant_end2 = output.char_to_token(
+                            i, chat_string.index(assistant_wrappers[i][1][1]) + len(assistant_wrappers[i][1][1]) - 1
+                        )
+                        # assert 1 in assistant indices
+                        self.assertEqual(all(output["assistant_mask"][i][assistant_start : assistant_end + 1]), True)
+                        self.assertEqual(all(output["assistant_mask"][i][assistant_start2 : assistant_end2 + 1]), True)
+
+                        # assert 0 in user/system indices
+                        self.assertEqual(sum(output["assistant_mask"][i][:assistant_start]), 0)
+                        self.assertEqual(sum(output["assistant_mask"][i][assistant_end + 1 : assistant_start2]), 0)
 
                     # check not batched
                     output = tokenizer_r.apply_chat_template(
@@ -1220,17 +1235,23 @@ class TokenizerTesterMixin:
                         return_dict=True,
                     )
 
-                    labels = [
-                        output["input_ids"][index] if mask == 1 else -100
-                        for index, mask in enumerate(output["assistant_mask"])
-                    ]
-                    expected = [
-                        tokenizer_r(f"{m['content']+'<|im_end|>'}", add_special_tokens=False)["input_ids"]
-                        for m in conversations[0]
-                        if m["role"] == "assistant"
-                    ]
-                    expected = expected[0] + expected[1]
-                    self.assertEqual([t for t in labels if t != -100], expected)
+                    chat_string = tokenizer_r.apply_chat_template(conversations[0], tokenize=False,chat_template=dummy_template)
+                    assistant_start = output.char_to_token(0, chat_string.index(assistant_wrappers[0][0][0]))
+                    assistant_end = output.char_to_token(
+                        0, chat_string.index(assistant_wrappers[0][0][1]) + len(assistant_wrappers[0][0][1]) - 1
+                    )
+                    assistant_start2 = output.char_to_token(0, chat_string.index(assistant_wrappers[0][1][0]))
+                    assistant_end2 = output.char_to_token(
+                        0, chat_string.index(assistant_wrappers[0][1][1]) + len(assistant_wrappers[0][1][1]) - 1
+                    )
+
+                    # assert 1 in assistant indices
+                    self.assertEqual(all(output["assistant_mask"][assistant_start : assistant_end + 1]), True)
+                    self.assertEqual(all(output["assistant_mask"][assistant_start2 : assistant_end2 + 1]), True)
+
+                    # assert 0 in user/system indices
+                    self.assertEqual(sum(output["assistant_mask"][:assistant_start]), 0)
+                    self.assertEqual(sum(output["assistant_mask"][assistant_end + 1 : assistant_start2]), 0)
 
     @require_jinja
     def test_chat_template_dict(self):
