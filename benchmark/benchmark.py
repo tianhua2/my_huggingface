@@ -94,14 +94,12 @@ def summarize(run_dir, metrics, expand_metrics=False):
             config = json.load(fp)
         model = config["backend"]["model"]
 
-        report_dir_name = report_dir.replace(f"backend.model={model},", "").replace(f"backend.model={model}", "")
-
         # Ths looks like `benchmark.input_shapes.batch_size=1,benchmark.input_shapes.sequence_length=5`.
-        # (we rely on usinng hydra's `--multirun` and `hydra.sweep.subdir=${hydra.job.override_dirname}`.
-        report_dir_name = str(Path(report_dir_name).parts[-1])
-
-        if report_dir_name.startswith("commit="):
-            report_dir_name = ""
+        # (we rely on the usage of hydra's `${hydra.job.override_dirname}`.)
+        experiment_name = report_dir.replace(f"backend.model={model},", "").replace(f"backend.model={model}", "")
+        experiment_name = str(Path(experiment_name).parts[-1])
+        if experiment_name.startswith("commit="):
+            experiment_name = config["experiment_name"]
 
         metrics_values = {}
         # post-processing of report: show a few selected/important metric
@@ -130,7 +128,7 @@ def summarize(run_dir, metrics, expand_metrics=False):
         # show some config information
         print(f"model: {model}")
         print(f"commit: {commit}")
-        print(f"config: {report_dir_name}")
+        print(f"config: {experiment_name}")
         if len(metrics_values) > 0:
             print("metrics:")
             if expand_metrics:
