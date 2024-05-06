@@ -99,7 +99,7 @@ test-examples:
 # Run benchmark
 
 benchmark:
-	python3 benchmark/benchmark.py --config-dir benchmark/config --config-name generation --commit=diff --metrics=decode.latency.mean,per_token.latency.mean,per_token.throughput.value backend.model=google/gemma-2b --multirun
+	python3 benchmark/benchmark.py --config-dir config --config-name generation --commit=diff --metrics=decode.latency.mean,per_token.latency.mean,per_token.throughput.value backend.model=google/gemma-2b --multirun
 
 # Run tests for SageMaker DLC release
 
