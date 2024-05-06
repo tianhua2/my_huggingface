@@ -1208,7 +1208,9 @@ class TokenizerTesterMixin:
                             for index, mask in enumerate(output["assistant_mask"][i])
                         ]
 
-                        chat_string = tokenizer_r.apply_chat_template(conversations[i], tokenize=False,chat_template=dummy_template)
+                        chat_string = tokenizer_r.apply_chat_template(
+                            conversations[i], tokenize=False, chat_template=dummy_template
+                        )
                         assistant_start = output.char_to_token(i, chat_string.index(assistant_wrappers[i][0][0]))
                         assistant_end = output.char_to_token(
                             i, chat_string.index(assistant_wrappers[i][0][1]) + len(assistant_wrappers[i][0][1]) - 1
@@ -1235,7 +1237,9 @@ class TokenizerTesterMixin:
                         return_dict=True,
                     )
 
-                    chat_string = tokenizer_r.apply_chat_template(conversations[0], tokenize=False,chat_template=dummy_template)
+                    chat_string = tokenizer_r.apply_chat_template(
+                        conversations[0], tokenize=False, chat_template=dummy_template
+                    )
                     assistant_start = output.char_to_token(0, chat_string.index(assistant_wrappers[0][0][0]))
                     assistant_end = output.char_to_token(
                         0, chat_string.index(assistant_wrappers[0][0][1]) + len(assistant_wrappers[0][0][1]) - 1
