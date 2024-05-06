@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """
-Run benchmark using optimum-benchmark library with some customization in `transformers`.
+Run benchmark using the `optimum-benchmark` library with some customization in `transformers`.
 
 Assume we are under `transformers` root directory: (make sure the commits are valid commits)
 ```bash
