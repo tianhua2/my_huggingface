@@ -229,7 +229,14 @@ if __name__ == "__main__":
 
     repo = Repo(PATH_TO_REPO)
 
-    metrics = ["decode.latency.mean"]
+    metrics = [
+        "prefill.latency.mean",
+        "prefill.throughput.value",
+        "decode.latency.mean",
+        "decode.throughput.value",
+        "per_token.latency.mean",
+        "per_token.throughput.value",
+    ]
     if args.metrics is not None:
         metrics = args.metrics.split(",")
 
