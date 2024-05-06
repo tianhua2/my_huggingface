@@ -96,7 +96,7 @@ def summarize(run_dir, metrics, expand_metrics=False):
 
         # Ths looks like `benchmark.input_shapes.batch_size=1,benchmark.input_shapes.sequence_length=5`.
         # (we rely on the usage of hydra's `${hydra.job.override_dirname}`.)
-        experiment_name = report_dir.replace(f"backend.model={model},", "").replace(f"backend.model={model}", "")
+        experiment_name = re.sub(f"backend.model={model},*", "", report_dir)
         experiment_name = str(Path(experiment_name).parts[-1])
         if experiment_name.startswith("commit="):
             experiment_name = config["experiment_name"]
@@ -141,7 +141,7 @@ def summarize(run_dir, metrics, expand_metrics=False):
         summary = {
             "model": model,
             "commit": commit,
-            "config": report_dir_name,
+            "config": experiment_name,
             "metrics": metrics_values,
         }
         summaries.append(summary)
