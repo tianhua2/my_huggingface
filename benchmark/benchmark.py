@@ -293,7 +293,7 @@ if __name__ == "__main__":
                     if arg_dix > -1:
                         optimum_benchmark_args[arg_dix] = f"{arg_name}={commit_run_dir}"
                     else:
-                        dir_args = [f"hydra.sweep.dir={commit_run_dir}", f'hydra.run.dir="{commit_run_dir}/' + '${hydra.job.override_dirname}"']
+                        dir_args = [f"hydra.sweep.dir={commit_run_dir}", f'hydra.run.dir={commit_run_dir}/' + '${hydra.job.override_dirname}']
                 main(args.config_dir, args.config_name, model_arg + dir_args + optimum_benchmark_args)
 
             if commit_run_dir is not None:
