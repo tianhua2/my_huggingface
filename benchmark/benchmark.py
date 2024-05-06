@@ -17,7 +17,7 @@ Run benchmark using optimum-benchmark library with a small customization.
 
 Assume we are under `transformers` root directory: (make sure the commits are valid commits)
 ```bash
-python benchmark/benchmark.py --config-dir benchmark/config --config-name generation --commit=51efc6b8d8b46af49973a6a23e1aa4d1477d8216 --metrics=decode.latency.mean,per_token.latency.mean,per_token.throughput.value backend.model=google/gemma-2b benchmark.input_shapes.sequence_length=5,7 benchmark.input_shapes.batch_size=1,2 --multirun
+python benchmark/benchmark.py --config-dir benchmark/config --config-name generation --commit=9b9c7f03da625b13643e99205c691fe046461724 --metrics=decode.latency.mean,per_token.latency.mean,per_token.throughput.value backend.model=google/gemma-2b benchmark.input_shapes.sequence_length=5,7 benchmark.input_shapes.batch_size=1,2 --multirun
 ```
 """
 
