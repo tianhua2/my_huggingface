@@ -78,11 +78,13 @@ def summarize(run_dir, metrics, expand_metrics=False):
 
     summaries = []
     for report_dir in report_dirs:
-        commit = re.search(r"/commit=(.+?)/", report_dir).groups()[0]
+        commit = re.search(r"/commit=(.+?)/*$", report_dir).groups()[0]
 
         # Ths looks like `benchmark.input_shapes.batch_size=1,benchmark.input_shapes.sequence_length=5`.
         # (we rely on usinng hydra's `--multirun` and `hydra.sweep.subdir=${hydra.job.override_dirname}`.
         report_dir_name = str(Path(report_dir).parts[-1])
+        if report_dir_name.startswith("commit="):
+            report_dir_name = ""
 
         if not os.path.isfile(os.path.join(report_dir, "benchmark_report.json")):
             continue
