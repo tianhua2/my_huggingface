@@ -1203,11 +1203,6 @@ class TokenizerTesterMixin:
                         return_dict=True,
                     )
                     for i, conv in enumerate(conversations):
-                        labels = [
-                            output["input_ids"][i][index] if mask == 1 else -100
-                            for index, mask in enumerate(output["assistant_mask"][i])
-                        ]
-
                         chat_string = tokenizer_r.apply_chat_template(
                             conversations[i], tokenize=False, chat_template=dummy_template
                         )

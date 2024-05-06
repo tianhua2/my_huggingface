@@ -1846,11 +1846,10 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
                     for i in range(len(input_ids)):
                         current_assistent_mask = [0] * len(input_ids[i])
                         for assistant_start_char, assistant_end_char in all_generation_indices[i]:
-                            for char_index in range(assistant_start_char, assistant_end_char):
-                                token_index = out.char_to_token(i, char_index)
-                                if token_index is None:
-                                    continue  # will happen on spaces in bpe tokenizers
-                                current_assistent_mask[token_index] = 1
+                            start_token = out.char_to_token(i, assistant_start_char)
+                            end_token = out.char_to_token(i, assistant_end_char - 1)
+                            for token_id in range(start_token, end_token + 1):
+                                current_assistent_mask[token_id] = 1
                         assistant_mask.append(current_assistent_mask)
                     out["assistant_mask"] = assistant_mask if is_batched else assistant_mask[0]
                 return out
