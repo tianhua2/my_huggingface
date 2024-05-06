@@ -220,7 +220,7 @@ if __name__ == "__main__":
         "--commit",
         type=list_str,
         default="",
-        help="Comma-separated list of branch names and/or commit sha values on which the benchmark will run.",
+        help="Comma-separated list of branch names and/or commit sha values on which the benchmark will run. If `diff` is specified, it will run on both the current head and the `main` branch.",
     )
     parser.add_argument("--metrics", type=str, help="The metrics to be included in the summary.")
     args, optimum_benchmark_args = parser.parse_known_args()
