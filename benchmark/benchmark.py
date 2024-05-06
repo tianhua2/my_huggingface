@@ -1,3 +1,26 @@
+# Copyright 2024 The HuggingFace Team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Run benchmark using optimum-benchmark library with a small customization.
+
+Assume we are under `transformers` root directory: (make sure the commits are valid commits)
+```bash
+python benchmark/benchmark.py --config-dir benchmark/config --config-name generation --commit=51efc6b8d8b46af49973a6a23e1aa4d1477d8216 --metrics=decode.latency.mean,per_token.latency.mean,per_token.throughput.value backend.model=google/gemma-2b benchmark.input_shapes.sequence_length=5,7 benchmark.input_shapes.batch_size=1,2 --multirun
+```
+"""
+
 import argparse
 import glob
 import json
