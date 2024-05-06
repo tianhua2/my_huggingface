@@ -78,7 +78,7 @@ def summarize(run_dir, metrics, expand_metrics=False):
 
     summaries = []
     for report_dir in report_dirs:
-        commit = re.search(r"/commit=(.+?)/*$", report_dir).groups()[0]
+        commit = re.search(r"/commit\\{0,1}=(.+?)/*$", report_dir).groups()[0]
 
         # Ths looks like `benchmark.input_shapes.batch_size=1,benchmark.input_shapes.sequence_length=5`.
         # (we rely on usinng hydra's `--multirun` and `hydra.sweep.subdir=${hydra.job.override_dirname}`.
@@ -298,7 +298,7 @@ if __name__ == "__main__":
 
             if commit_run_dir is not None:
                 # Need to remove the `\` character
-                summaries = summarize(commit_run_dir.replace(r"commit\=", "commit="), metrics)
+                summaries = summarize(commit_run_dir, metrics)
                 run_summaries.extend(summaries)
 
     # aggregate the information across the commits
