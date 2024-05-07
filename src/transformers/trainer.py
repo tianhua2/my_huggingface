@@ -918,7 +918,9 @@ class Trainer:
         else:
             return None
 
-    def get_eval_dataloader(self, eval_dataset: Optional[Dataset] = None) -> DataLoader:
+    def get_eval_dataloader(
+        self, eval_dataset: Optional[Dataset] = None, eval_dataset_name: Optional[str] = None
+    ) -> DataLoader:
         """
         Returns the evaluation [`~torch.utils.data.DataLoader`].
 
@@ -928,14 +930,23 @@ class Trainer:
             eval_dataset (`torch.utils.data.Dataset`, *optional*):
                 If provided, will override `self.eval_dataset`. If it is a [`~datasets.Dataset`], columns not accepted
                 by the `model.forward()` method are automatically removed. It must implement `__len__`.
+            eval_dataset_name (`str`, *optional*):
+                The name of the evaluation dataset. This is useful when using multiple evaluation datasets and
+               `self.args.dataloader_persistent_workers` is set to `True`. If not provided, will default to `eval`.
         """
         if eval_dataset is None and self.eval_dataset is None:
             raise ValueError("Trainer: evaluation requires an eval_dataset.")
 
         # If we have persistent workers, don't do a fork bomb especially as eval datasets
         # don't change during training
-        if hasattr(self, "_eval_dataloader") and self.args.dataloader_persistent_workers:
-            return self.accelerator.prepare(self._eval_dataloader)
+        dataloader_key = "eval" if eval_dataset_name is None else eval_dataset_name
+        if (
+            hasattr(self, "_eval_dataloaders")
+            and dataloader_key in self._eval_dataloaders
+            and self.args.dataloader_persistent_workers
+        ):
+            return self.accelerator.prepare(self._eval_dataloaders[dataloader_key])
+
         eval_dataset = eval_dataset if eval_dataset is not None else self.eval_dataset
         data_collator = self.data_collator
 
@@ -961,7 +972,10 @@ class Trainer:
         # we need to store the non-prepared version
         eval_dataloader = DataLoader(eval_dataset, **dataloader_params)
         if self.args.dataloader_persistent_workers:
-            self._eval_dataloader = eval_dataloader
+            if hasattr(self, "_eval_dataloaders"):
+                self._eval_dataloaders[dataloader_key] = eval_dataloader
+            else:
+                self._eval_dataloaders = {dataloader_key: eval_dataloader}
 
         return self.accelerator.prepare(eval_dataloader)
 
@@ -3485,6 +3499,7 @@ class Trainer:
         eval_dataset: Optional[Union[Dataset, Dict[str, Dataset]]] = None,
         ignore_keys: Optional[List[str]] = None,
         metric_key_prefix: str = "eval",
+        eval_dataset_name: Optional[str] = None,
     ) -> Dict[str, float]:
         """
         Run evaluation and returns metrics.
@@ -3519,7 +3534,8 @@ class Trainer:
             metric_key_prefix (`str`, *optional*, defaults to `"eval"`):
                 An optional prefix to be used as the metrics key prefix. For example the metrics "bleu" will be named
                 "eval_bleu" if the prefix is "eval" (default)
-
+            eval_dataset_name (`str`, *optional*):
+                The name of the evaluation dataset. If `eval_dataset` is a dictionary, this will be set automatically.
         Returns:
             A dictionary containing the evaluation loss and the potential metrics computed from the predictions. The
             dictionary also contains the epoch number which comes from the training state.
@@ -3528,11 +3544,12 @@ class Trainer:
         eval_dataset = eval_dataset if eval_dataset is not None else self.eval_dataset
         if isinstance(eval_dataset, dict):
             metrics = {}
-            for eval_dataset_name, _eval_dataset in eval_dataset.items():
+            for _eval_dataset_name, _eval_dataset in eval_dataset.items():
                 dataset_metrics = self.evaluate(
                     eval_dataset=_eval_dataset,
                     ignore_keys=ignore_keys,
-                    metric_key_prefix=f"{metric_key_prefix}_{eval_dataset_name}",
+                    metric_key_prefix=f"{metric_key_prefix}_{_eval_dataset_name}",
+                    eval_dataset_name=_eval_dataset_name,
                 )
                 metrics.update(dataset_metrics)
             return metrics
@@ -3540,7 +3557,7 @@ class Trainer:
         # memory metrics - must set up as early as possible
         self._memory_tracker.start()
 
-        eval_dataloader = self.get_eval_dataloader(eval_dataset)
+        eval_dataloader = self.get_eval_dataloader(eval_dataset, eval_dataset_name=eval_dataset_name)
         if self.is_fsdp_xla_v2_enabled:
             eval_dataloader = tpu_spmd_dataloader(eval_dataloader)
 
