@@ -934,6 +934,8 @@ _import_structure = {
     "models.vit_msn": ["VIT_MSN_PRETRAINED_CONFIG_ARCHIVE_MAP", "ViTMSNConfig"],
     "models.vitdet": ["VITDET_PRETRAINED_CONFIG_ARCHIVE_MAP", "VitDetConfig"],
     "models.vitmatte": ["VITMATTE_PRETRAINED_CONFIG_ARCHIVE_MAP", "VitMatteConfig"],
+    "models.vitpose": ["ViTPoseConfig"],
+    "models.vitpose_backbone": ["ViTPoseBackboneConfig"],
     "models.vits": [
         "VITS_PRETRAINED_CONFIG_ARCHIVE_MAP",
         "VitsConfig",
@@ -1380,6 +1382,7 @@ else:
     _import_structure["models.vit"].extend(["ViTFeatureExtractor", "ViTImageProcessor"])
     _import_structure["models.vit_hybrid"].extend(["ViTHybridImageProcessor"])
     _import_structure["models.vitmatte"].append("VitMatteImageProcessor")
+    _import_structure["models.vitpose"].append("ViTPoseImageProcessor")
     _import_structure["models.vivit"].append("VivitImageProcessor")
     _import_structure["models.yolos"].extend(["YolosFeatureExtractor", "YolosImageProcessor"])
 
@@ -3716,6 +3719,18 @@ else:
             "VitMattePreTrainedModel",
         ]
     )
+    _import_structure["models.vitpose"].extend(
+        [
+            "ViTPoseForPoseEstimation",
+            "ViTPosePreTrainedModel",
+        ]
+    )
+    _import_structure["models.vitpose_backbone"].extend(
+        [
+            "ViTPoseBackbone",
+            "ViTPoseBackbonePreTrainedModel",
+        ]
+    )
     _import_structure["models.vits"].extend(
         [
             "VITS_PRETRAINED_MODEL_ARCHIVE_LIST",
@@ -5898,6 +5913,8 @@ if TYPE_CHECKING:
     from .models.vit_msn import VIT_MSN_PRETRAINED_CONFIG_ARCHIVE_MAP, ViTMSNConfig
     from .models.vitdet import VITDET_PRETRAINED_CONFIG_ARCHIVE_MAP, VitDetConfig
     from .models.vitmatte import VITMATTE_PRETRAINED_CONFIG_ARCHIVE_MAP, VitMatteConfig
+    from .models.vitpose import ViTPoseConfig
+    from .models.vitpose_backbone import ViTPoseBackboneConfig
     from .models.vits import (
         VITS_PRETRAINED_CONFIG_ARCHIVE_MAP,
         VitsConfig,
@@ -6340,6 +6357,7 @@ if TYPE_CHECKING:
         from .models.vit import ViTFeatureExtractor, ViTImageProcessor
         from .models.vit_hybrid import ViTHybridImageProcessor
         from .models.vitmatte import VitMatteImageProcessor
+        from .models.vitpose import ViTPoseImageProcessor
         from .models.vivit import VivitImageProcessor
         from .models.yolos import YolosFeatureExtractor, YolosImageProcessor
 
@@ -8255,6 +8273,11 @@ if TYPE_CHECKING:
             VitMatteForImageMatting,
             VitMattePreTrainedModel,
         )
+        from .models.vitpose import (
+            ViTPoseForPoseEstimation,
+            ViTPosePreTrainedModel,
+        )
+        from .models.vitpose_backbone import ViTPoseBackbone, ViTPoseBackbonePreTrainedModel
         from .models.vits import (
             VITS_PRETRAINED_MODEL_ARCHIVE_LIST,
             VitsModel,
