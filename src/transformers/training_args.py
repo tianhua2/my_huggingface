@@ -171,6 +171,8 @@ class OptimizerNames(ExplicitEnum):
     GALORE_ADAMW_LAYERWISE = "galore_adamw_layerwise"
     GALORE_ADAMW_8BIT_LAYERWISE = "galore_adamw_8bit_layerwise"
     GALORE_ADAFACTOR_LAYERWISE = "galore_adafactor_layerwise"
+    SCHEDULE_FREE_ADAMW_32BIT = "schedule_free_adamw_32bit"
+    SCHEDULE_FREE_SGD_32BIT = "schedule_free_adamw_32bit"
 
 
 # Sometimes users will pass in a `str` repr of a dict in the CLI
