@@ -474,6 +474,7 @@ class WhisperGenerationMixin:
                 "The input name `inputs` is deprecated. Please make sure to use `input_features` instead.",
                 FutureWarning,
             )
+
         # 1. prepare generation config
         generation_config, kwargs = self._prepare_generation_config(generation_config, **kwargs)
 
