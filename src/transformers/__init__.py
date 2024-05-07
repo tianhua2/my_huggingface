@@ -918,6 +918,10 @@ _import_structure = {
         "UnivNetFeatureExtractor",
     ],
     "models.upernet": ["UperNetConfig"],
+    "models.video_llava": [
+        "VIDEO_LLAVA_PRETRAINED_CONFIG_ARCHIVE_MAP",
+        "VideoLlavaConfig",
+    ],
     "models.videomae": ["VIDEOMAE_PRETRAINED_CONFIG_ARCHIVE_MAP", "VideoMAEConfig"],
     "models.vilt": [
         "VILT_PRETRAINED_CONFIG_ARCHIVE_MAP",
@@ -3625,6 +3629,15 @@ else:
             "UperNetPreTrainedModel",
         ]
     )
+    _import_structure["models.video_llava"].extend(
+        [
+            "VIDEO_LLAVA_PRETRAINED_MODEL_ARCHIVE_LIST",
+            "VideoLlavaForConditionalGeneration",
+            "VideoLlavaImageProcessor",
+            "VideoLlavaPreTrainedModel",
+            "VideoLlavaProcessor",
+        ]
+    )
     _import_structure["models.videomae"].extend(
         [
             "VIDEOMAE_PRETRAINED_MODEL_ARCHIVE_LIST",
@@ -5885,6 +5898,10 @@ if TYPE_CHECKING:
         UnivNetFeatureExtractor,
     )
     from .models.upernet import UperNetConfig
+    from .models.video_llava import (
+        VIDEO_LLAVA_PRETRAINED_CONFIG_ARCHIVE_MAP,
+        VideoLlavaConfig,
+    )
     from .models.videomae import VIDEOMAE_PRETRAINED_CONFIG_ARCHIVE_MAP, VideoMAEConfig
     from .models.vilt import (
         VILT_PRETRAINED_CONFIG_ARCHIVE_MAP,
@@ -8184,6 +8201,13 @@ if TYPE_CHECKING:
         from .models.upernet import (
             UperNetForSemanticSegmentation,
             UperNetPreTrainedModel,
+        )
+        from .models.video_llava import (
+            VIDEO_LLAVA_PRETRAINED_MODEL_ARCHIVE_LIST,
+            VideoLlavaForConditionalGeneration,
+            VideoLlavaImageProcessor,
+            VideoLlavaPreTrainedModel,
+            VideoLlavaProcessor,
         )
         from .models.videomae import (
             VIDEOMAE_PRETRAINED_MODEL_ARCHIVE_LIST,
