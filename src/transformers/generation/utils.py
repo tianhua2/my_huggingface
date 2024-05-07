@@ -1554,22 +1554,14 @@ class GenerationMixin:
                         "Please install it via  with `pip install git+https://github.com/huggingface/quanto`"
                     )
 
-                if model_kwargs.get("past_key_values") is not None:
-                    if not isinstance(model_kwargs["past_key_values"], QuantCache):
-                        raise ValueError(
-                            f"Setting `QuantCache` and passing {type(model_kwargs['past_key_values'])} for `past_key_values` is not implemented. "
-                            "Either pass `QuantCache` type or do not pass `past_key_values`"
-                        )
-                else:
-                    # get the config with defualt values if user did not pass anything
-                    cache_config = (
-                        generation_config.cache_config if generation_config.cache_config is not None else CacheConfig()
-                    )
-                    model_kwargs["past_key_values"] = QuantCache(
-                        nbits=cache_config.nbits,
-                        q_group_size=cache_config.q_group_size,
-                        residual_length=cache_config.residual_length,
-                    )
+                cache_config = (
+                    generation_config.cache_config if generation_config.cache_config is not None else CacheConfig()
+                )
+                model_kwargs["past_key_values"] = QuantCache(
+                    nbits=cache_config.nbits,
+                    q_group_size=cache_config.q_group_size,
+                    residual_length=cache_config.residual_length,
+                )
 
         self._validate_generated_length(generation_config, input_ids_length, has_default_max_length)
 
