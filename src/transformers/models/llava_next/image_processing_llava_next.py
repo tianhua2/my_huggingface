@@ -446,6 +446,23 @@ class LlavaNextImageProcessor(BaseImageProcessor):
 
         return image_patches
 
+    def _pad_for_batching(self, pixel_values: List[np.ndarray]):
+        """
+        Pads images on the `num_of_patches` dimension with zeros to form a batch of same number of patches.
+
+        Args:
+            pixel_values (`List[np.ndarray]`): array of pixel values of each images of shape (bs, num_patches, 3d_image)
+        """
+        max_patch = max(len(x) for x in pixel_values)
+        pixel_values = [
+            np.concatenate([x, np.zeros([max_patch - x.shape[0]] + list(x.shape[1:]), dtype=x.dtype)], axis=0)
+            if x.shape[0] < max_patch
+            else x
+            for x in pixel_values
+        ]
+
+        return pixel_values
+
     def preprocess(
         self,
         images: ImageInput,
@@ -516,6 +533,7 @@ class LlavaNextImageProcessor(BaseImageProcessor):
                 - `"channels_first"` or `ChannelDimension.FIRST`: image in (num_channels, height, width) format.
                 - `"channels_last"` or `ChannelDimension.LAST`: image in (height, width, num_channels) format.
                 - `"none"` or `ChannelDimension.NONE`: image in (height, width) format.
+
         """
         do_resize = do_resize if do_resize is not None else self.do_resize
         size = size if size is not None else self.size
@@ -603,6 +621,7 @@ class LlavaNextImageProcessor(BaseImageProcessor):
             pixel_values = np.array(pixel_values)
             new_images.append(pixel_values)
 
-        data = {"pixel_values": new_images, "image_sizes": image_sizes}
-
-        return BatchFeature(data=data, tensor_type=return_tensors)
+        padded_images = self._pad_for_batching(new_images)
+        return BatchFeature(
+            data={"pixel_values": padded_images, "image_sizes": image_sizes}, tensor_type=return_tensors
+        )
