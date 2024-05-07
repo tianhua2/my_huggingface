@@ -31,14 +31,20 @@ from transformers.testing_utils import (
 from transformers.utils import cached_property
 
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, ids_tensor
+from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor
 from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_torch_available():
     import torch
 
-    from transformers import UdopEncoderModel, UdopForConditionalGeneration, UdopModel, UdopProcessor
+    from transformers import (
+        UdopEncoderModel,
+        UdopForConditionalGeneration,
+        UdopForTokenClassification,
+        UdopModel,
+        UdopProcessor,
+    )
 
 
 if is_vision_available():
@@ -52,7 +58,10 @@ class UdopModelTester:
         vocab_size=99,
         batch_size=13,
         encoder_seq_length=7,
-        decoder_seq_length=9,
+        decoder_seq_length=14,
+        text_seq_length=7,
+        num_channels=3,
+        image_size=224,
         # For common tests
         is_training=True,
         use_attention_mask=True,
@@ -69,12 +78,17 @@ class UdopModelTester:
         scope=None,
         decoder_layers=None,
         range_bbox=1000,
+        num_labels=2,
         decoder_start_token_id=0,
     ):
         self.parent = parent
         self.batch_size = batch_size
         self.encoder_seq_length = encoder_seq_length
         self.decoder_seq_length = decoder_seq_length
+        self.image_size = image_size
+        self.text_seq_length = text_seq_length
+        self.num_labels = num_labels
+        self.num_channels = num_channels
         # For common tests
         self.seq_length = self.decoder_seq_length
         self.is_training = is_training
@@ -110,7 +124,7 @@ class UdopModelTester:
                     bbox[i, j, 2] = bbox[i, j, 0]
                     bbox[i, j, 0] = t
         decoder_input_ids = ids_tensor([self.batch_size, self.decoder_seq_length], self.vocab_size)
-
+        pixel_values = floats_tensor([self.batch_size, self.num_channels, self.image_size, self.image_size])
         attention_mask = None
         decoder_attention_mask = None
         if self.use_attention_mask:
@@ -119,7 +133,7 @@ class UdopModelTester:
 
         lm_labels = None
         if self.use_labels:
-            lm_labels = ids_tensor([self.batch_size, self.decoder_seq_length], self.vocab_size)
+            lm_labels = ids_tensor([self.batch_size, self.decoder_seq_length], self.num_labels)
 
         config = self.get_config()
 
@@ -127,6 +141,7 @@ class UdopModelTester:
             config,
             input_ids,
             bbox,
+            pixel_values,
             decoder_input_ids,
             attention_mask,
             decoder_attention_mask,
@@ -156,6 +171,7 @@ class UdopModelTester:
         config,
         input_ids,
         bbox,
+        pixel_values,
         decoder_input_ids,
         attention_mask,
         decoder_attention_mask,
@@ -188,6 +204,7 @@ class UdopModelTester:
         config,
         input_ids,
         bbox,
+        pixel_values,
         decoder_input_ids,
         attention_mask,
         decoder_attention_mask,
@@ -205,11 +222,36 @@ class UdopModelTester:
         self.parent.assertEqual(outputs["logits"].size(), (self.batch_size, self.decoder_seq_length, self.vocab_size))
         self.parent.assertEqual(outputs["loss"].size(), ())
 
+    def create_and_check_for_token_classification(
+        self,
+        config,
+        input_ids,
+        bbox,
+        pixel_values,
+        token_type_ids,
+        input_mask,
+        sequence_labels,
+        token_labels=None,
+    ):
+        config.num_labels = self.num_labels
+        model = UdopForTokenClassification(config=config)
+        model.to(torch_device)
+        model.eval()
+        result = model(
+            input_ids,
+            bbox=bbox,
+            pixel_values=pixel_values,
+            attention_mask=input_mask,
+            labels=token_labels.to(torch.float),
+        )
+        self.parent.assertEqual(result.logits.shape, (self.batch_size, self.text_seq_length, self.num_labels))
+
     def create_and_check_generate_with_past_key_values(
         self,
         config,
         input_ids,
         bbox,
+        pixel_values,
         decoder_input_ids,
         attention_mask,
         decoder_attention_mask,
@@ -231,6 +273,7 @@ class UdopModelTester:
         config,
         input_ids,
         bbox,
+        pixel_values,
         decoder_input_ids,
         attention_mask,
         decoder_attention_mask,
@@ -246,6 +289,7 @@ class UdopModelTester:
             config,
             input_ids,
             bbox,
+            pixel_values,
             decoder_input_ids,
             attention_mask,
             decoder_attention_mask,
@@ -269,6 +313,7 @@ class UdopModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
         (
             UdopModel,
             UdopForConditionalGeneration,
+            # UdopForTokenClassification,
         )
         if is_torch_available()
         else ()
@@ -310,6 +355,10 @@ class UdopModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
     def test_with_lm_head(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()
         self.model_tester.create_and_check_with_lm_head(*config_and_inputs)
+
+    def test_for_token_classification(self):
+        config_and_inputs = self.model_tester.prepare_config_and_inputs()
+        self.model_tester.create_and_check_for_token_classification(*config_and_inputs)
 
     def test_generate_with_past_key_values(self):
         config_and_inputs = self.model_tester.prepare_config_and_inputs()

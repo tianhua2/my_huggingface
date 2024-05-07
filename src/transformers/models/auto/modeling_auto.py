@@ -1063,6 +1063,7 @@ MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("roformer", "RoFormerForTokenClassification"),
         ("squeezebert", "SqueezeBertForTokenClassification"),
         ("t5", "T5ForTokenClassification"),
+        ("udop", "UdopForTokenClassification"),
         ("umt5", "UMT5ForTokenClassification"),
         ("xlm", "XLMForTokenClassification"),
         ("xlm-roberta", "XLMRobertaForTokenClassification"),

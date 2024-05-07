@@ -3576,6 +3576,7 @@ else:
             "UDOP_PRETRAINED_MODEL_ARCHIVE_LIST",
             "UdopEncoderModel",
             "UdopForConditionalGeneration",
+            "UdopForTokenClassification",
             "UdopModel",
             "UdopPreTrainedModel",
         ],
@@ -8150,6 +8151,7 @@ if TYPE_CHECKING:
             UDOP_PRETRAINED_MODEL_ARCHIVE_LIST,
             UdopEncoderModel,
             UdopForConditionalGeneration,
+            UdopForTokenClassification,
             UdopModel,
             UdopPreTrainedModel,
         )
