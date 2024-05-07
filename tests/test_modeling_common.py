@@ -3720,6 +3720,12 @@ class ModelTesterMixin:
         for model_class in self.all_model_classes:
             config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
             model = model_class(config)
+            # FIXME: we deactivate boolean mask because pretrained models
+            # will not load the mask token
+            if "use_mask_token" in inspect.signature(model_class).parameters:
+                deactivate_mask = True
+            else:
+                deactivate_mask = False
 
             is_encoder_decoder = model.config.is_encoder_decoder
 
@@ -3836,6 +3842,7 @@ class ModelTesterMixin:
                                         "decoder_attention_mask": dummy_attention_mask,
                                         "output_hidden_states": True,
                                     }
+
                                 else:
                                     processed_inputs = {
                                         model.main_input_name: dummy_input,
@@ -3845,6 +3852,37 @@ class ModelTesterMixin:
                                     # Otherwise fails for e.g. WhisperEncoderModel
                                     if "attention_mask" in inspect.signature(model_eager.forward).parameters:
                                         processed_inputs["attention_mask"] = dummy_attention_mask
+
+                                if (
+                                    "bool_masked_pos" in inspect.signature(model_eager.forward).parameters
+                                ) and not deactivate_mask:
+                                    dummy_mask = torch.ones((self.model_tester.num_masks,))
+
+                                    # In case of additional token (like class) we define a custome `mask_length`
+                                    if hasattr(self.model_tester, "mask_length"):
+                                        dummy_mask = torch.cat(
+                                            [
+                                                dummy_mask,
+                                                torch.zeros(self.model_tester.mask_length - dummy_mask.size(0)),
+                                            ]
+                                        )
+                                    else:
+                                        dummy_mask = torch.cat(
+                                            [
+                                                dummy_mask,
+                                                torch.zeros(self.model_tester.seq_length - dummy_mask.size(0)),
+                                            ]
+                                        )
+                                    dummy_bool_masked_pos = dummy_mask.expand(batch_size, -1).bool()
+                                    processed_inputs["bool_masked_pos"] = dummy_bool_masked_pos.to(torch_device)
+
+                                if "noise" in inspect.signature(model_eager.forward).parameters:
+                                    np.random.seed(2)
+                                    num_patches = int(
+                                        (self.model_tester.image_size // self.model_tester.patch_size) ** 2
+                                    )
+                                    noise = np.random.uniform(size=(batch_size, num_patches))
+                                    processed_inputs["noise"] = torch.from_numpy(noise)
 
                                 # TODO: test gradients as well (& for FA2 as well!)
                                 with torch.no_grad():

@@ -21,7 +21,14 @@ import unittest
 
 import numpy as np
 
-from transformers.testing_utils import is_pt_flax_cross_test, require_torch, require_vision, slow, torch_device
+from transformers.testing_utils import (
+    _run_slow_tests,
+    is_pt_flax_cross_test,
+    require_torch,
+    require_vision,
+    slow,
+    torch_device,
+)
 from transformers.utils import is_flax_available, is_torch_available, is_vision_available
 
 from ...test_modeling_common import floats_tensor, ids_tensor, random_attention_mask
@@ -252,6 +259,7 @@ class VisionTextDualEncoderMixin:
         inputs_dict = self.prepare_config_and_inputs()
         self.check_save_load(**inputs_dict)
 
+    @slow
     def test_vision_text_output_attention(self):
         inputs_dict = self.prepare_config_and_inputs()
         self.check_vision_text_output_attention(**inputs_dict)
@@ -309,6 +317,10 @@ class ViTBertModelTest(VisionTextDualEncoderMixin, unittest.TestCase):
         return model, inputs
 
     def get_vision_text_model(self, vision_config, text_config):
+        # Run in eager mode if we are in slow mode
+        if _run_slow_tests:
+            vision_config._attn_implementation = "eager"
+
         vision_model = ViTModel(vision_config).eval()
         text_model = BertModel(text_config).eval()
         return vision_model, text_model
@@ -396,6 +408,10 @@ class DeiTRobertaModelTest(VisionTextDualEncoderMixin, unittest.TestCase):
         )
 
     def get_vision_text_model(self, vision_config, text_config):
+        # Run in eager mode if we are in slow mode
+        if _run_slow_tests:
+            vision_config._attn_implementation = "eager"
+
         vision_model = DeiTModel(vision_config).eval()
         text_model = RobertaModel(text_config).eval()
         return vision_model, text_model

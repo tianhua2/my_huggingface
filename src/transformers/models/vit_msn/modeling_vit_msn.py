@@ -28,7 +28,12 @@ from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutput, ImageClassifierOutput
 from ...modeling_utils import PreTrainedModel
 from ...pytorch_utils import find_pruneable_heads_and_indices, prune_linear_layer
-from ...utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
+from ...utils import (
+    add_start_docstrings,
+    add_start_docstrings_to_model_forward,
+    logging,
+    replace_return_docstrings,
+)
 from .configuration_vit_msn import ViTMSNConfig
 
 
@@ -38,7 +43,9 @@ logger = logging.get_logger(__name__)
 _CONFIG_FOR_DOC = "ViTMSNConfig"
 _CHECKPOINT_FOR_DOC = "facebook/vit-msn-small"
 
-from ..deprecated._archive_maps import VIT_MSN_PRETRAINED_MODEL_ARCHIVE_LIST  # noqa: F401, E402
+from ..deprecated._archive_maps import (  # noqa: F401, E402
+    VIT_MSN_PRETRAINED_MODEL_ARCHIVE_LIST,
+)
 
 
 class ViTMSNEmbeddings(nn.Module):
@@ -77,7 +84,10 @@ class ViTMSNEmbeddings(nn.Module):
         patch_window_width = width // self.config.patch_size
         # we add a small number to avoid floating point error in the interpolation
         # see discussion at https://github.com/facebookresearch/dino/issues/8
-        patch_window_height, patch_window_width = patch_window_height + 0.1, patch_window_width + 0.1
+        patch_window_height, patch_window_width = (
+            patch_window_height + 0.1,
+            patch_window_width + 0.1,
+        )
         patch_pos_embed = patch_pos_embed.reshape(1, int(math.sqrt(num_positions)), int(math.sqrt(num_positions)), dim)
         patch_pos_embed = patch_pos_embed.permute(0, 3, 1, 2)
         patch_pos_embed = nn.functional.interpolate(
@@ -224,6 +234,38 @@ class ViTMSNSelfAttention(nn.Module):
         return outputs
 
 
+# Copied from transformers.models.vit.modeling_vit.ViTSdpaSelfAttention with ViT->ViTMSN
+class ViTMSNSdpaSelfAttention(ViTMSNSelfAttention):
+    def __init__(self, config: ViTMSNConfig) -> None:
+        super().__init__(config)
+        self.attention_probs_dropout_prob = config.attention_probs_dropout_prob
+
+    def forward(
+        self, hidden_states, head_mask: Optional[torch.Tensor] = None, output_attentions: bool = False
+    ) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor]]:
+        mixed_query_layer = self.query(hidden_states)
+
+        key_layer = self.transpose_for_scores(self.key(hidden_states))
+        value_layer = self.transpose_for_scores(self.value(hidden_states))
+        query_layer = self.transpose_for_scores(mixed_query_layer)
+
+        context_layer = torch.nn.functional.scaled_dot_product_attention(
+            query_layer,
+            key_layer,
+            value_layer,
+            head_mask,
+            self.attention_probs_dropout_prob if self.training else 0.0,
+            is_causal=False,
+            scale=None,
+        )
+
+        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
+        new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
+        context_layer = context_layer.view(new_context_layer_shape)
+
+        return context_layer, None
+
+
 # Copied from transformers.models.vit.modeling_vit.ViTSelfOutput with ViT->ViTMSN
 class ViTMSNSelfOutput(nn.Module):
     """
@@ -283,6 +325,13 @@ class ViTMSNAttention(nn.Module):
         return outputs
 
 
+# Copied from transformers.models.vit.modeling_vit.ViTSdpaAttention with ViT->ViTMSN
+class ViTMSNSdpaAttention(ViTMSNAttention):
+    def __init__(self, config: ViTMSNConfig) -> None:
+        super().__init__(config)
+        self.attention = ViTMSNSdpaSelfAttention(config)
+
+
 # Copied from transformers.models.vit.modeling_vit.ViTIntermediate with ViT->ViTMSN
 class ViTMSNIntermediate(nn.Module):
     def __init__(self, config: ViTMSNConfig) -> None:
@@ -316,7 +365,10 @@ class ViTMSNOutput(nn.Module):
         return hidden_states
 
 
-# Copied from transformers.models.vit.modeling_vit.ViTLayer with ViT->ViTMSN
+VITMSN_ATTENTION_CLASSES = {"eager": ViTMSNAttention, "sdpa": ViTMSNSdpaAttention}
+
+
+# Copied from transformers.models.vit.modeling_vit.ViTLayer with ViT->ViTMSN, VIT->VITMSN
 class ViTMSNLayer(nn.Module):
     """This corresponds to the Block class in the timm implementation."""
 
@@ -324,7 +376,7 @@ class ViTMSNLayer(nn.Module):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
-        self.attention = ViTMSNAttention(config)
+        self.attention = VITMSN_ATTENTION_CLASSES[config._attn_implementation](config)
         self.intermediate = ViTMSNIntermediate(config)
         self.output = ViTMSNOutput(config)
         self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
@@ -422,6 +474,7 @@ class ViTMSNPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = True
     _no_split_modules = ["ViTMSNAttention"]
+    _supports_sdpa = True
 
     # todo: Resort to https://github.com/facebookresearch/msn/blob/main/src/deit.py#L200-#L211
     # when creating pre-training scripts.
@@ -555,7 +608,9 @@ class ViTMSNModel(ViTMSNPreTrainedModel):
         head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
 
         embedding_output = self.embeddings(
-            pixel_values, bool_masked_pos=bool_masked_pos, interpolate_pos_encoding=interpolate_pos_encoding
+            pixel_values,
+            bool_masked_pos=bool_masked_pos,
+            interpolate_pos_encoding=interpolate_pos_encoding,
         )
 
         encoder_outputs = self.encoder(

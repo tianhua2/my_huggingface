@@ -63,7 +63,9 @@ _CHECKPOINT_FOR_DOC = "hustvl/yolos-small"
 _EXPECTED_OUTPUT_SHAPE = [1, 3401, 384]
 
 
-from ..deprecated._archive_maps import YOLOS_PRETRAINED_MODEL_ARCHIVE_LIST  # noqa: F401, E402
+from ..deprecated._archive_maps import (  # noqa: F401, E402
+    YOLOS_PRETRAINED_MODEL_ARCHIVE_LIST,
+)
 
 
 @dataclass
@@ -174,9 +176,15 @@ class InterpolateInitialPositionEmbeddings(nn.Module):
         patch_pos_embed = patch_pos_embed.view(batch_size, hidden_size, patch_height, patch_width)
 
         height, width = img_size
-        new_patch_heigth, new_patch_width = height // self.config.patch_size, width // self.config.patch_size
+        new_patch_heigth, new_patch_width = (
+            height // self.config.patch_size,
+            width // self.config.patch_size,
+        )
         patch_pos_embed = nn.functional.interpolate(
-            patch_pos_embed, size=(new_patch_heigth, new_patch_width), mode="bicubic", align_corners=False
+            patch_pos_embed,
+            size=(new_patch_heigth, new_patch_width),
+            mode="bicubic",
+            align_corners=False,
         )
         patch_pos_embed = patch_pos_embed.flatten(2).transpose(1, 2)
         scale_pos_embed = torch.cat((cls_pos_embed, patch_pos_embed, det_pos_embed), dim=1)
@@ -202,9 +210,15 @@ class InterpolateMidPositionEmbeddings(nn.Module):
         )
         patch_pos_embed = patch_pos_embed.view(depth * batch_size, hidden_size, patch_height, patch_width)
         height, width = img_size
-        new_patch_height, new_patch_width = height // self.config.patch_size, width // self.config.patch_size
+        new_patch_height, new_patch_width = (
+            height // self.config.patch_size,
+            width // self.config.patch_size,
+        )
         patch_pos_embed = nn.functional.interpolate(
-            patch_pos_embed, size=(new_patch_height, new_patch_width), mode="bicubic", align_corners=False
+            patch_pos_embed,
+            size=(new_patch_height, new_patch_width),
+            mode="bicubic",
+            align_corners=False,
         )
         patch_pos_embed = (
             patch_pos_embed.flatten(2)
@@ -310,6 +324,38 @@ class YolosSelfAttention(nn.Module):
         return outputs
 
 
+# Copied from transformers.models.vit.modeling_vit.ViTSdpaSelfAttention with ViT->Yolos
+class YolosSdpaSelfAttention(YolosSelfAttention):
+    def __init__(self, config: YolosConfig) -> None:
+        super().__init__(config)
+        self.attention_probs_dropout_prob = config.attention_probs_dropout_prob
+
+    def forward(
+        self, hidden_states, head_mask: Optional[torch.Tensor] = None, output_attentions: bool = False
+    ) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor]]:
+        mixed_query_layer = self.query(hidden_states)
+
+        key_layer = self.transpose_for_scores(self.key(hidden_states))
+        value_layer = self.transpose_for_scores(self.value(hidden_states))
+        query_layer = self.transpose_for_scores(mixed_query_layer)
+
+        context_layer = torch.nn.functional.scaled_dot_product_attention(
+            query_layer,
+            key_layer,
+            value_layer,
+            head_mask,
+            self.attention_probs_dropout_prob if self.training else 0.0,
+            is_causal=False,
+            scale=None,
+        )
+
+        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
+        new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
+        context_layer = context_layer.view(new_context_layer_shape)
+
+        return context_layer, None
+
+
 # Copied from transformers.models.vit.modeling_vit.ViTSelfOutput with ViT->Yolos
 class YolosSelfOutput(nn.Module):
     """
@@ -369,6 +415,13 @@ class YolosAttention(nn.Module):
         return outputs
 
 
+# Copied from transformers.models.vit.modeling_vit.ViTSdpaAttention with ViT->Yolos
+class YolosSdpaAttention(YolosAttention):
+    def __init__(self, config: YolosConfig) -> None:
+        super().__init__(config)
+        self.attention = YolosSdpaSelfAttention(config)
+
+
 # Copied from transformers.models.vit.modeling_vit.ViTIntermediate with ViT->Yolos
 class YolosIntermediate(nn.Module):
     def __init__(self, config: YolosConfig) -> None:
@@ -402,7 +455,10 @@ class YolosOutput(nn.Module):
         return hidden_states
 
 
-# Copied from transformers.models.vit.modeling_vit.ViTLayer with ViT->Yolos
+YOLOS_ATTENTION_CLASSES = {"eager": YolosAttention, "sdpa": YolosSdpaAttention}
+
+
+# Copied from transformers.models.vit.modeling_vit.ViTLayer with ViT->Yolos,VIT->YOLOS
 class YolosLayer(nn.Module):
     """This corresponds to the Block class in the timm implementation."""
 
@@ -410,7 +466,7 @@ class YolosLayer(nn.Module):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
-        self.attention = YolosAttention(config)
+        self.attention = YOLOS_ATTENTION_CLASSES[config._attn_implementation](config)
         self.intermediate = YolosIntermediate(config)
         self.output = YolosOutput(config)
         self.layernorm_before = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
@@ -534,6 +590,7 @@ class YolosPreTrainedModel(PreTrainedModel):
     main_input_name = "pixel_values"
     supports_gradient_checkpointing = True
     _no_split_modules = []
+    _supports_sdpa = True
 
     def _init_weights(self, module: Union[nn.Linear, nn.Conv2d, nn.LayerNorm]) -> None:
         """Initialize the weights"""
@@ -704,10 +761,16 @@ class YolosForObjectDetection(YolosPreTrainedModel):
         # Object detection heads
         # We add one for the "no object" class
         self.class_labels_classifier = YolosMLPPredictionHead(
-            input_dim=config.hidden_size, hidden_dim=config.hidden_size, output_dim=config.num_labels + 1, num_layers=3
+            input_dim=config.hidden_size,
+            hidden_dim=config.hidden_size,
+            output_dim=config.num_labels + 1,
+            num_layers=3,
         )
         self.bbox_predictor = YolosMLPPredictionHead(
-            input_dim=config.hidden_size, hidden_dim=config.hidden_size, output_dim=4, num_layers=3
+            input_dim=config.hidden_size,
+            hidden_dim=config.hidden_size,
+            output_dim=4,
+            num_layers=3,
         )
 
         # Initialize weights and apply final processing
@@ -799,7 +862,9 @@ class YolosForObjectDetection(YolosPreTrainedModel):
         if labels is not None:
             # First: create the matcher
             matcher = YolosHungarianMatcher(
-                class_cost=self.config.class_cost, bbox_cost=self.config.bbox_cost, giou_cost=self.config.giou_cost
+                class_cost=self.config.class_cost,
+                bbox_cost=self.config.bbox_cost,
+                giou_cost=self.config.giou_cost,
             )
             # Second: create the criterion
             losses = ["labels", "boxes", "cardinality"]

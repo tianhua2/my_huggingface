@@ -23,6 +23,7 @@ from packaging import version
 
 from transformers import DonutProcessor, NougatProcessor, TrOCRProcessor
 from transformers.testing_utils import (
+    _run_slow_tests,
     require_levenshtein,
     require_nltk,
     require_sentencepiece,
@@ -323,6 +324,7 @@ class EncoderDecoderMixin:
         input_ids_dict = self.prepare_config_and_inputs()
         self.check_save_and_load_encoder_decoder_model(**input_ids_dict)
 
+    @slow
     def test_encoder_decoder_model_output_attentions(self):
         input_ids_dict = self.prepare_config_and_inputs()
         self.check_encoder_decoder_model_output_attentions(**input_ids_dict)
@@ -457,6 +459,8 @@ class DeiT2RobertaModelTest(EncoderDecoderMixin, unittest.TestCase):
         )
 
     def get_encoder_decoder_model(self, config, decoder_config):
+        if _run_slow_tests:
+            config._attn_implementation = "eager"
         encoder_model = DeiTModel(config).eval()
         decoder_model = BertLMHeadModel(decoder_config).eval()
         return encoder_model, decoder_model
@@ -522,6 +526,8 @@ class ViT2BertModelTest(EncoderDecoderMixin, unittest.TestCase):
         return model, inputs
 
     def get_encoder_decoder_model(self, config, decoder_config):
+        if _run_slow_tests:
+            config._attn_implementation = "eager"
         encoder_model = ViTModel(config).eval()
         decoder_model = BertLMHeadModel(decoder_config).eval()
         return encoder_model, decoder_model
@@ -650,6 +656,8 @@ class Swin2BartModelTest(EncoderDecoderMixin, unittest.TestCase):
 @require_torch
 class ViT2TrOCR(EncoderDecoderMixin, unittest.TestCase):
     def get_encoder_decoder_model(self, config, decoder_config):
+        if _run_slow_tests:
+            config._attn_implementation = "eager"
         encoder_model = ViTModel(config).eval()
         decoder_model = TrOCRForCausalLM(decoder_config).eval()
         return encoder_model, decoder_model
