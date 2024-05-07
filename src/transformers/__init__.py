@@ -533,6 +533,7 @@ _import_structure = {
         "InstructBlipVisionConfig",
     ],
     "models.jamba": ["JambaConfig"],
+    "models.jetmoe": ["JetMoeConfig"],
     "models.jukebox": [
         "JUKEBOX_PRETRAINED_CONFIG_ARCHIVE_MAP",
         "JukeboxConfig",
@@ -2509,6 +2510,14 @@ else:
             "JambaForSequenceClassification",
             "JambaModel",
             "JambaPreTrainedModel",
+        ]
+    )
+    _import_structure["models.jetmoe"].extend(
+        [
+            "JetMoeForCausalLM",
+            "JetMoeForSequenceClassification",
+            "JetMoeModel",
+            "JetMoePreTrainedModel",
         ]
     )
     _import_structure["models.jukebox"].extend(
@@ -5506,6 +5515,7 @@ if TYPE_CHECKING:
         InstructBlipVisionConfig,
     )
     from .models.jamba import JambaConfig
+    from .models.jetmoe import JetMoeConfig
     from .models.jukebox import (
         JUKEBOX_PRETRAINED_CONFIG_ARCHIVE_MAP,
         JukeboxConfig,
@@ -7289,6 +7299,12 @@ if TYPE_CHECKING:
             JambaForSequenceClassification,
             JambaModel,
             JambaPreTrainedModel,
+        )
+        from .models.jetmoe import (
+            JetMoeForCausalLM,
+            JetMoeForSequenceClassification,
+            JetMoeModel,
+            JetMoePreTrainedModel,
         )
         from .models.jukebox import (
             JUKEBOX_PRETRAINED_MODEL_ARCHIVE_LIST,
