@@ -3845,6 +3845,12 @@ class ModelTesterMixin:
                                     # Otherwise fails for e.g. WhisperEncoderModel
                                     if "attention_mask" in inspect.signature(model_eager.forward).parameters:
                                         processed_inputs["attention_mask"] = dummy_attention_mask
+                                    # Otherwise fails for e.g. CLIPModelTest
+                                    if (
+                                        "pixel_values" in inspect.signature(model_eager.forward).parameters
+                                        and model_class.__name__ == "CLIPModel"
+                                    ):
+                                        processed_inputs["pixel_values"] = inputs_dict["pixel_values"]
 
                                 # TODO: test gradients as well (& for FA2 as well!)
                                 with torch.no_grad():
@@ -3857,16 +3863,24 @@ class ModelTesterMixin:
                                         outputs_eager = model_eager(**prepared_inputs)
                                         outputs_sdpa = model_sdpa(**prepared_inputs)
 
-                                logits_eager = (
-                                    outputs_eager.hidden_states[-1]
-                                    if not is_encoder_decoder
-                                    else outputs_eager.decoder_hidden_states[-1]
-                                )
-                                logits_sdpa = (
-                                    outputs_sdpa.hidden_states[-1]
-                                    if not is_encoder_decoder
-                                    else outputs_sdpa.decoder_hidden_states[-1]
-                                )
+                                # `CLIPOutput` doesn't have "hidden_states" or "decoder_hidden_states".
+                                if model_class.__name__ == "CLIPModel":
+                                    logits_eager = torch.cat(
+                                        [outputs_eager.image_embeds, outputs_eager.text_embeds], dim=0
+                                    )
+                                elif is_encoder_decoder:
+                                    logits_eager = outputs_eager.decoder_hidden_states[-1]
+                                else:
+                                    logits_eager = outputs_eager.hidden_states[-1]
+
+                                if model_class.__name__ == "CLIPModel":
+                                    logits_sdpa = torch.cat(
+                                        [outputs_sdpa.image_embeds, outputs_sdpa.text_embeds], dim=0
+                                    )
+                                elif is_encoder_decoder:
+                                    logits_sdpa = outputs_sdpa.decoder_hidden_states[-1]
+                                else:
+                                    logits_sdpa = outputs_sdpa.hidden_states[-1]
 
                                 if torch_device in ["cpu", "cuda"]:
                                     atol = atols[torch_device, enable_kernels, torch_dtype]
@@ -3946,6 +3960,8 @@ class ModelTesterMixin:
                 self.skipTest("Llava-like models currently (transformers==4.39.1) requires an attention_mask input")
             if config.model_type in ["idefics"]:
                 self.skipTest("Idefics currently (transformers==4.39.1) requires an image_attention_mask input")
+            if "clip" in config.model_type:
+                self.skipTest("CLIP text tower has two attention masks: `causal_attention_mask` and `attention_mask`")
             model = model_class(config)
 
             with tempfile.TemporaryDirectory() as tmpdirname:
