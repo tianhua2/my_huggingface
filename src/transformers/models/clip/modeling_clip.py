@@ -1322,8 +1322,8 @@ class CLIPVisionModelWithProjection(CLIPPreTrainedModel):
 
 @add_start_docstrings(
     """
-    CLIP vision encoder with an image classification head on top (a linear layer on top of the pooled final hidden states of
-    the patch tokens) e.g. for ImageNet.
+    CLIP vision encoder with an image classification head on top (a linear layer on top of the pooled output)
+    e.g. for ImageNet.
     """,
     CLIP_START_DOCSTRING,
 )
@@ -1358,6 +1358,7 @@ class CLIPForImageClassification(CLIPPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        use_pooler=True,
     ) -> Union[tuple, ImageClassifierOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
@@ -1377,13 +1378,14 @@ class CLIPForImageClassification(CLIPPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-
-        sequence_output = outputs[0]
-
-        # average pool the patch tokens
-        sequence_output = torch.mean(sequence_output[:, 1:, :], dim=1)
-        # apply classifier
-        logits = self.classifier(sequence_output)
+        if use_pooler:
+            # select pooler output
+            embedding = outputs[1]
+        else:
+            # average pool the patch tokens
+            embedding = torch.mean(outputs[0][:, 1:, :], dim=1)
+        # apply classifier on the chosen embedding
+        logits = self.classifier(embedding)
 
         loss = None
         if labels is not None:
