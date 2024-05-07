@@ -1692,6 +1692,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
         max_length: Optional[int] = None,
         return_tensors: Optional[Union[str, TensorType]] = None,
         return_dict: bool = False,
+        return_assistant_mask: bool = False,
         tokenizer_kwargs: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> Union[str, List[int], List[str], List[List[int]], BatchEncoding]:
@@ -1742,6 +1743,9 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
                 "`return_dict=True` is incompatible with `tokenize=False`, because there is no dict "
                 "of tokenizer outputs to return."
             )
+
+        if return_assistant_mask and not return_dict:
+            raise ValueError("`return_assistant_mask=True` is incompatible with `return_dict=False`")
 
         if tokenizer_kwargs is None:
             tokenizer_kwargs = {}
@@ -1804,15 +1808,20 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
             is_batched = False
 
         rendered = []
+        all_generation_indices = []
         template_kwargs = {**self.special_tokens_map, **kwargs}  # kwargs overwrite special tokens if both are present
         for chat in conversations:
             if hasattr(chat, "messages"):
                 # Indicates it's a Conversation object
                 chat = chat.messages
-            rendered_chat = compiled_template.render(
-                messages=chat, add_generation_prompt=add_generation_prompt, **template_kwargs
+            rendered_chat, generation_indices = self._render_with_assistant_indices(
+                compiled_template=compiled_template,
+                messages=chat,
+                add_generation_prompt=add_generation_prompt,
+                **template_kwargs,
             )
             rendered.append(rendered_chat)
+            all_generation_indices.append(generation_indices)
 
         if not is_batched:
             rendered = rendered[0]
@@ -1828,17 +1837,44 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
                 **tokenizer_kwargs,
             )
             if return_dict:
+                if return_assistant_mask:
+                    assistant_mask = []
+                    if is_batched or return_tensors:
+                        input_ids = out["input_ids"]
+                    else:
+                        input_ids = [out["input_ids"]]
+                    for i in range(len(input_ids)):
+                        current_assistent_mask = [0] * len(input_ids[i])
+                        for assistant_start_char, assistant_end_char in all_generation_indices[i]:
+                            start_token = out.char_to_token(i, assistant_start_char)
+                            end_token = out.char_to_token(i, assistant_end_char - 1)
+                            for token_id in range(start_token, end_token + 1):
+                                current_assistent_mask[token_id] = 1
+                        assistant_mask.append(current_assistent_mask)
+                    out["assistant_mask"] = assistant_mask if is_batched else assistant_mask[0]
                 return out
             else:
                 return out["input_ids"]
         else:
             return rendered
 
+    def _render_with_assistant_indices(self, compiled_template, messages, add_generation_prompt, **template_kwargs):
+        rendered_blocks, generation_indices = compiled_template.environment.new_generation_trackers()
+        for i in compiled_template.generate(
+            messages=messages, add_generation_prompt=add_generation_prompt, **template_kwargs
+        ):
+            rendered_blocks.append(i)
+        rendered_chat = "".join(rendered_blocks)
+        # copy for safety as it is mutable and still referenced in the environment
+        return rendered_chat, generation_indices.copy()
+
     @lru_cache
     def _compile_jinja_template(self, chat_template):
         try:
             import jinja2
+            from jinja2 import nodes
             from jinja2.exceptions import TemplateError
+            from jinja2.ext import Extension
             from jinja2.sandbox import ImmutableSandboxedEnvironment
         except ImportError:
             raise ImportError("apply_chat_template requires jinja2 to be installed.")
@@ -1851,7 +1887,34 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
         def raise_exception(message):
             raise TemplateError(message)
 
-        jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True)
+        class AssistantTracker(Extension):
+            tags = {"generation"}
+
+            def __init__(self, environment):
+                super().__init__(environment)
+                environment.extend(new_generation_trackers=self.new_generation_trackers)
+                self.rendered_blocks = []
+                self.generation_indices = []
+
+            def new_generation_trackers(self):
+                self.rendered_blocks = []
+                self.generation_indices = []
+                return self.rendered_blocks, self.generation_indices
+
+            def parse(self, parser):
+                lineno = next(parser.stream).lineno
+                body = parser.parse_statements(["name:endgeneration"], drop_needle=True)
+                return nodes.CallBlock(self.call_method("_generation_support"), [], [], body).set_lineno(lineno)
+
+            @jinja2.pass_eval_context
+            def _generation_support(self, context, caller):
+                rv = caller()
+                start_index = len("".join(self.rendered_blocks))
+                end_index = start_index + len(rv)
+                self.generation_indices.append((start_index, end_index))
+                return rv
+
+        jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, extensions=[AssistantTracker])
         jinja_env.globals["raise_exception"] = raise_exception
         return jinja_env.from_string(chat_template)
 
@@ -1863,11 +1926,16 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
         """
         return (
             "{% for message in messages %}"
+            "{% if (message['role'] != 'assistant') %}"
             "{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}"
-            "{% endfor %}"
-            "{% if add_generation_prompt %}"
-            "{{ '<|im_start|>assistant\n' }}"
+            "{% elif (message['role'] == 'assistant')%}"
+            "{{'<|im_start|>' + message['role'] + '\n'}}"
+            "{% generation %}"
+            "{{message['content'] + '<|im_end|>'}}"
+            "{% endgeneration %}"
+            "{{'\n'}}"
             "{% endif %}"
+            "{% endfor %}"
         )
 
     @classmethod

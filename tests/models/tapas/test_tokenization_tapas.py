@@ -1275,3 +1275,7 @@ class TapasTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
     @unittest.skip("Chat is not supported")
     def test_chat_template(self):
         pass
+
+    @unittest.skip("Chat is not supported")
+    def test_chat_template_return_mask(self):
+        pass

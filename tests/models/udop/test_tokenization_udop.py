@@ -1158,6 +1158,10 @@ class UdopTokenizationTest(TokenizerTesterMixin, unittest.TestCase):
         pass
 
     @unittest.skip("Chat template tests don't play well with table/layout models.")
+    def test_chat_template_return_mask(self):
+        pass
+
+    @unittest.skip("Chat template tests don't play well with table/layout models.")
     def test_chat_template_batched(self):
         pass
 
