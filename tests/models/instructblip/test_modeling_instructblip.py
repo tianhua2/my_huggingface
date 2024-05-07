@@ -21,6 +21,7 @@ import unittest
 
 import numpy as np
 import requests
+from huggingface_hub import hf_hub_download
 
 from transformers import (
     CONFIG_MAPPING,
@@ -574,6 +575,40 @@ class InstructBlipModelIntegrationTest(unittest.TestCase):
         self.assertEqual(
             generated_text,
             "The unusual aspect of this image is that a man is ironing clothes on the back of a yellow SUV while driving down a busy city street.",
+        )
+
+    @require_bitsandbytes
+    @require_accelerate
+    def test_inference_vicuna_7b_video(self):
+        processor = InstructBlipProcessor.from_pretrained("Salesforce/instructblip-vicuna-7b")
+        model = InstructBlipForConditionalGeneration.from_pretrained(
+            "Salesforce/instructblip-vicuna-7b", load_in_8bit=True, low_cpu_mem_usage=True
+        )
+
+        prompt = "What is happening in the video?"
+        video_file = hf_hub_download(
+            repo_id="raushan-testing-hf/videos-test", filename="video_demo.npy", repo_type="dataset"
+        )
+        video = np.load(video_file)[::2]
+        inputs = processor(videos=list(video), text=prompt, return_tensors="pt").to(torch_device, torch.float16)
+
+        # verify logits
+        with torch.no_grad():
+            logits = model(**inputs).logits
+
+        expected_slice = torch.tensor(
+            [[-3.2168, -11.5938, 9.2812], [-5.3906, -12.8828, 10.2891], [-3.5684, -12.9062, 9.8984]],
+            device=torch_device,
+        )
+        self.assertTrue(torch.allclose(logits[0, :3, :3].float(), expected_slice, atol=1e-3))
+
+        # verify generation
+        outputs = model.generate(**inputs, max_new_tokens=30)
+        generated_text = processor.batch_decode(outputs, skip_special_tokens=True)[0].strip()
+
+        self.assertEqual(
+            generated_text,
+            "A baby is sitting on a bed, reading a book, and wearing glasses. The baby is engrossed in the book, and the",
         )
 
     def test_inference_flant5_xl(self):

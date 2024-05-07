@@ -28,8 +28,8 @@ if is_vision_available():
     from transformers import (
         AutoProcessor,
         BertTokenizerFast,
-        BlipImageProcessor,
         GPT2Tokenizer,
+        InstructBlipImageProcessor,
         InstructBlipProcessor,
         PreTrainedTokenizerFast,
     )
@@ -40,7 +40,7 @@ class InstructBlipProcessorTest(unittest.TestCase):
     def setUp(self):
         self.tmpdirname = tempfile.mkdtemp()
 
-        image_processor = BlipImageProcessor()
+        image_processor = InstructBlipImageProcessor()
         tokenizer = GPT2Tokenizer.from_pretrained("hf-internal-testing/tiny-random-GPT2Model")
         qformer_tokenizer = BertTokenizerFast.from_pretrained("hf-internal-testing/tiny-random-bert")
 
@@ -90,7 +90,7 @@ class InstructBlipProcessorTest(unittest.TestCase):
         self.assertIsInstance(processor.tokenizer, PreTrainedTokenizerFast)
 
         self.assertEqual(processor.image_processor.to_json_string(), image_processor_add_kwargs.to_json_string())
-        self.assertIsInstance(processor.image_processor, BlipImageProcessor)
+        self.assertIsInstance(processor.image_processor, InstructBlipImageProcessor)
         self.assertIsInstance(processor.qformer_tokenizer, BertTokenizerFast)
 
     def test_image_processor(self):

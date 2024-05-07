@@ -1372,11 +1372,46 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         >>> generated_text = processor.batch_decode(outputs, skip_special_tokens=True)[0].strip()
         >>> print(generated_text)
         The unusual aspect of this image is that a man is ironing clothes on the back of a yellow SUV, which is parked in the middle of a busy city street. This is an unconventional approach to ironing clothes, as it requires the man to balance himself and his ironing equipment on top of the vehicle while navigating through traffic. Additionally, the presence of taxis and other vehicles in the scene further emphasizes the unusual nature of this situation.
+
+        # To generate from video input
+        >>> from huggingface_hub import hf_hub_download
+        >>> from decord import VideoReader
+        >>> file_path = hf_hub_download(
+                repo_id="nielsr/video-demo", filename="eating_spaghetti.mp4", repo_type="dataset"
+            )
+
+        >>> vr = VideoReader(uri=file_path, height=224, width=224)
+        >>> start, end = 0, len(vr)
+        >>> indices = np.arange(start, end, vlen / 4).astype(int)
+        >>> frames = vr.get_batch(indices).asnumpy()
+        >>> video = list(frames)
+        >>> prompt = "What is happening in the video?"
+        >>> inputs = processor(videos=[video], text=prompt, return_tensors="pt").to(device)
+
+        >>> outputs = model.generate(
+        ...     **inputs,
+        ...     do_sample=False,
+        ...     num_beams=5,
+        ...     max_length=256,
+        ...     min_length=1,
+        ...     top_p=0.9,
+        ...     repetition_penalty=1.5,
+        ...     length_penalty=1.0,
+        ...     temperature=1,
+        ... )
+        >>> generated_text = processor.batch_decode(outputs, skip_special_tokens=True)[0].strip()
+        >>> print(generated_text)
+        "A person is eating a bowl of pasta, and they are using a fork to eat it. The person is sitting at a table, and the plate of pasta is on the table in front"
         ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        batch_size = pixel_values.shape[0]
 
         # step 1: forward the images through the vision encoder,
         # to get image embeddings of shape (batch_size, seq_len, hidden_size)
+        if pixel_values.dim() == 5:
+            _, frames, channel, height, width = pixel_values.shape
+            pixel_values = pixel_values.reshape(batch_size * frames, channel, height, width)
+
         vision_outputs = self.vision_model(
             pixel_values=pixel_values,
             output_attentions=output_attentions,
@@ -1391,8 +1426,12 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         # difference with BLIP-2 here: we also feed the instruction prompt to the Q-Former
         query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
         query_attention_mask = torch.ones(query_tokens.size()[:-1], dtype=torch.long, device=image_embeds.device)
+
         if qformer_attention_mask is None:
             qformer_attention_mask = torch.ones_like(qformer_input_ids)
+        if query_attention_mask.shape[0] != batch_size:
+            qformer_input_ids = qformer_input_ids.repeat_interleave(frames, dim=0)
+            qformer_attention_mask = qformer_attention_mask.repeat_interleave(frames, dim=0)
         qformer_attention_mask = torch.cat([query_attention_mask, qformer_attention_mask], dim=1)
         query_outputs = self.qformer(
             input_ids=qformer_input_ids,
@@ -1408,6 +1447,12 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
 
         # step 3: use the language model, conditioned on the query outputs and the prompt
         language_model_inputs = self.language_projection(query_output)
+
+        # if video is passed unbatch the embeddings back, by moving frames to seq-len
+        if language_model_inputs.shape[0] != batch_size:
+            language_model_inputs = language_model_inputs.reshape(
+                batch_size, self.config.num_query_tokens * frames, -1
+            )
         language_model_attention_mask = torch.ones(
             language_model_inputs.size()[:-1], dtype=torch.long, device=language_model_inputs.device
         )
@@ -1482,8 +1527,8 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         Overrides `generate` function to be able to use the model as a conditional generator.
 
         Args:
-            pixel_values (`torch.FloatTensor` of shape (batch_size, num_channels, height, width)):
-                Input images to be processed.
+           pixel_values (`torch.FloatTensor` of shape (batch_size, num_channels, height, width) or
+                (batch_size, num_frames, num_channels, height, width)): Input images or videos to be processed.
             qformer_input_ids (`torch.LongTensor` of shape (batch_size, sequence_length), *optional*):
                 The sequence used as a prompt to be fed to the Q-Former module.
             qformer_attention_mask (`torch.LongTensor` of shape (batch_size, sequence_length), *optional*):
@@ -1501,14 +1546,21 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
             self._preprocess_accelerate()
 
         batch_size = pixel_values.shape[0]
-        image_embeds = self.vision_model(pixel_values, return_dict=True).last_hidden_state
+        # if video is passed as input, we process batched, later unbatch it back
+        if pixel_values.dim() == 5:
+            _, frames, channel, height, width = pixel_values.shape
+            pixel_values = pixel_values.reshape(batch_size * frames, channel, height, width)
 
+        image_embeds = self.vision_model(pixel_values, return_dict=True).last_hidden_state
         image_attention_mask = torch.ones(image_embeds.size()[:-1], dtype=torch.long, device=image_embeds.device)
 
         query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
         query_attention_mask = torch.ones(query_tokens.size()[:-1], dtype=torch.long, device=image_embeds.device)
         if qformer_attention_mask is None:
             qformer_attention_mask = torch.ones_like(qformer_input_ids)
+        if query_attention_mask.shape[0] != batch_size:
+            qformer_input_ids = qformer_input_ids.repeat_interleave(frames, dim=0)
+            qformer_attention_mask = qformer_attention_mask.repeat_interleave(frames, dim=0)
         qformer_attention_mask = torch.cat([query_attention_mask, qformer_attention_mask], dim=1)
         query_outputs = self.qformer(
             input_ids=qformer_input_ids,
@@ -1521,6 +1573,12 @@ class InstructBlipForConditionalGeneration(InstructBlipPreTrainedModel):
         query_output = query_outputs.last_hidden_state[:, : query_tokens.size(1), :]
 
         language_model_inputs = self.language_projection(query_output)
+
+        # if video is passed unbatch the embeddings back, by moving frames to seq-len
+        if language_model_inputs.shape[0] != batch_size:
+            language_model_inputs = language_model_inputs.reshape(
+                batch_size, self.config.num_query_tokens * frames, -1
+            )
         language_attention_mask = torch.ones(
             language_model_inputs.size()[:-1], dtype=torch.long, device=language_model_inputs.device
         )
