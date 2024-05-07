@@ -417,7 +417,7 @@ class QuantCache(Cache):
             )
             if (
                 self.key_cache[layer_idx].dim() == 4
-                and self.key_cache[layer_idx].shape[-2] + 1 == self.residual_length
+                and self.key_cache[layer_idx].shape[-2] + 1 >= self.residual_length
             ):
                 self._key_cache_quant[layer_idx] = self._quantize(keys_to_return.contiguous())
                 self._value_cache_quant[layer_idx] = self._quantize(values_to_return.contiguous())
