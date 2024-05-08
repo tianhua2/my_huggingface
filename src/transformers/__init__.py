@@ -1012,6 +1012,7 @@ _import_structure = {
     "models.xmod": ["XMOD_PRETRAINED_CONFIG_ARCHIVE_MAP", "XmodConfig"],
     "models.yolos": ["YOLOS_PRETRAINED_CONFIG_ARCHIVE_MAP", "YolosConfig"],
     "models.yoso": ["YOSO_PRETRAINED_CONFIG_ARCHIVE_MAP", "YosoConfig"],
+    "models.zoedepth": ["ZOEDEPTH_PRETRAINED_CONFIG_ARCHIVE_MAP", "ZoeDepthConfig"],
     "onnx": [],
     "pipelines": [
         "AudioClassificationPipeline",
@@ -1384,6 +1385,7 @@ else:
     _import_structure["models.vitmatte"].append("VitMatteImageProcessor")
     _import_structure["models.vivit"].append("VivitImageProcessor")
     _import_structure["models.yolos"].extend(["YolosFeatureExtractor", "YolosImageProcessor"])
+    _import_structure["models.zoedepth"].append("ZoeDepthImageProcessor")
 
 
 # PyTorch-backed objects
@@ -3905,6 +3907,12 @@ else:
             "YosoPreTrainedModel",
         ]
     )
+    _import_structure["models.zoedepth"].extend(
+        [
+            "ZoeDepthForDepthEstimation",
+            "ZoeDepthPreTrainedModel",
+        ]
+    )
     _import_structure["optimization"] = [
         "Adafactor",
         "AdamW",
@@ -5973,6 +5981,7 @@ if TYPE_CHECKING:
     from .models.xmod import XMOD_PRETRAINED_CONFIG_ARCHIVE_MAP, XmodConfig
     from .models.yolos import YOLOS_PRETRAINED_CONFIG_ARCHIVE_MAP, YolosConfig
     from .models.yoso import YOSO_PRETRAINED_CONFIG_ARCHIVE_MAP, YosoConfig
+    from .models.zoedepth import ZOEDEPTH_PRETRAINED_CONFIG_ARCHIVE_MAP, ZoeDepthConfig
 
     # Pipelines
     from .pipelines import (
@@ -6345,6 +6354,7 @@ if TYPE_CHECKING:
         from .models.vitmatte import VitMatteImageProcessor
         from .models.vivit import VivitImageProcessor
         from .models.yolos import YolosFeatureExtractor, YolosImageProcessor
+        from .models.zoedepth import ZoeDepthImageProcessor
 
     # Modeling
     try:
@@ -8410,6 +8420,10 @@ if TYPE_CHECKING:
             YosoLayer,
             YosoModel,
             YosoPreTrainedModel,
+        )
+        from .models.zoedepth import (
+            ZoeDepthForDepthEstimation,
+            ZoeDepthPreTrainedModel,
         )
 
         # Optimization
