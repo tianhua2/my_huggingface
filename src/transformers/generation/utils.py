@@ -24,7 +24,7 @@ import torch
 import torch.distributed as dist
 from torch import nn
 
-from ..cache_utils import Cache, DynamicCache, StaticCache
+from ..cache_utils import Cache, DynamicCache, QuantCache, StaticCache
 from ..integrations.deepspeed import is_deepspeed_zero3_enabled
 from ..modeling_outputs import CausalLMOutputWithPast, Seq2SeqLMOutput
 from ..models.auto import (
@@ -34,7 +34,7 @@ from ..models.auto import (
     MODEL_FOR_SPEECH_SEQ_2_SEQ_MAPPING,
     MODEL_FOR_VISION_2_SEQ_MAPPING,
 )
-from ..utils import ModelOutput, is_accelerate_available, is_torchdynamo_compiling, logging
+from ..utils import ModelOutput, is_accelerate_available, is_quanto_available, is_torchdynamo_compiling, logging
 from .beam_constraints import DisjunctiveConstraint, PhrasalConstraint
 from .beam_search import BeamScorer, BeamSearchScorer, ConstrainedBeamSearchScorer
 from .candidate_generator import (
@@ -45,7 +45,7 @@ from .candidate_generator import (
     _prepare_attention_mask,
     _prepare_token_type_ids,
 )
-from .configuration_utils import GenerationConfig, GenerationMode
+from .configuration_utils import CacheConfig, GenerationConfig, GenerationMode
 from .logits_process import (
     EncoderNoRepeatNGramLogitsProcessor,
     EncoderRepetitionPenaltyLogitsProcessor,
@@ -94,9 +94,7 @@ logger = logging.get_logger(__name__)
 if is_accelerate_available():
     from accelerate.hooks import AlignDevicesHook, add_hook_to_module
 
-NEED_SETUP_CACHE_CLASSES_MAPPING = {
-    "static": StaticCache,
-}
+NEED_SETUP_CACHE_CLASSES_MAPPING = {"static": StaticCache, "quantized": QuantCache}
 
 
 @dataclass
@@ -1557,6 +1555,21 @@ class GenerationMixin:
                 )
             if generation_config.cache_implementation == "static":
                 model_kwargs["past_key_values"] = self._get_static_cache(batch_size, generation_config.max_length)
+            elif generation_config.cache_implementation == "quantized":
+                if not is_quanto_available():
+                    raise ImportError(
+                        "You need to install `quanto` in order to use KV cache quantization. "
+                        "Please install it via  with `pip install git+https://github.com/huggingface/quanto`"
+                    )
+
+                cache_config = (
+                    generation_config.cache_config if generation_config.cache_config is not None else CacheConfig()
+                )
+                model_kwargs["past_key_values"] = QuantCache(
+                    nbits=cache_config.nbits,
+                    q_group_size=cache_config.q_group_size,
+                    residual_length=cache_config.residual_length,
+                )
 
         self._validate_generated_length(generation_config, input_ids_length, has_default_max_length)
 

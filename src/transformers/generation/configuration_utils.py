@@ -18,6 +18,7 @@ import copy
 import json
 import os
 import warnings
+from dataclasses import is_dataclass
 from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 
 from .. import __version__
@@ -30,8 +31,13 @@ from ..utils import (
     download_url,
     extract_commit_hash,
     is_remote_url,
+    is_torch_available,
     logging,
 )
+
+
+if is_torch_available():
+    from ..cache_utils import CacheConfig
 
 
 if TYPE_CHECKING:
@@ -277,6 +283,18 @@ class GenerationConfig(PushToHubMixin):
 
         cache_implementation (`str`, *optional*, default to `None`):
             Cache class that should be used when generating.
+        cache_config (`Union[CacheConfig, dict]`, *optional*, default to `None`):
+            Arguments used for quantized cache that stores keys and values in lower precision for memory efficiency.
+            If passed as `Dict`, it will be converted to a `CacheConfig` internally.
+            Accepts the following keys:
+            - nbits (`int`, *optional*, defaults to 2):
+                Number of bits, can be 2 or 4. Defaults to 2.
+            - q_group_size (`int`, *optional*, defaults to 64):
+                Size of the quantization group, should be a divisor of the model's hidden dimension.
+                Defaults to 64.
+            - residual_length (`int`, *optional*, defaults to 128):
+                Length of the residual cache which will always be stored in full/half presicion.
+                Defaults to 128.
 
         > Wild card
 
@@ -352,6 +370,12 @@ class GenerationConfig(PushToHubMixin):
 
         # Cache implementation
         self.cache_implementation = kwargs.pop("cache_implementation", None)
+        self.cache_config = kwargs.pop("cache_config", None)
+        if self.cache_implementation == "quantized":
+            if self.cache_config is None:
+                self.cache_config = CacheConfig()
+            elif isinstance(self.cache_config, dict):
+                self.cache_config = CacheConfig.from_dict(self.cache_config)
 
         # Prompt lookup decoding
         self.prompt_lookup_num_tokens = kwargs.pop("prompt_lookup_num_tokens", None)
@@ -603,7 +627,13 @@ class GenerationConfig(PushToHubMixin):
                     f"({self.num_beams})."
                 )
 
-        # 5. check common issue: passing `generate` arguments inside the generation config
+        # 5. check `cache_config`
+        if self.cache_config is not None:
+            if not isinstance(self.cache_config, CacheConfig):
+                self.cache_config = CacheConfig.from_dict(self.cache_config)
+            self.cache_config.validate()
+
+        # 6. check common issue: passing `generate` arguments inside the generation config
         generate_arguments = (
             "logits_processor",
             "stopping_criteria",
@@ -1011,7 +1041,16 @@ class GenerationConfig(PushToHubMixin):
             else:
                 return obj
 
+        def convert_dataclass_to_dict(obj):
+            if isinstance(obj, dict):
+                return {key: convert_dataclass_to_dict(value) for key, value in obj.items()}
+            elif is_dataclass(obj):
+                return obj.to_dict()
+            else:
+                return obj
+
         config_dict = convert_keys_to_string(config_dict)
+        config_dict = convert_dataclass_to_dict(config_dict)
 
         return json.dumps(config_dict, indent=2, sort_keys=True) + "\n"
 
