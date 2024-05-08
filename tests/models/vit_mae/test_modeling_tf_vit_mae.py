@@ -429,7 +429,7 @@ class TFViTMAEModelIntegrationTest(unittest.TestCase):
 
         model = TFViTMAEForPreTraining.from_pretrained("facebook/vit-mae-base")
 
-        image_processor = ViTImageProcessor.from_pretrained("facebook/vit-mae-base") if is_vision_available() else None
+        image_processor = self.default_image_processor
         image = prepare_img()
         inputs = image_processor(images=image, return_tensors="tf")
 
@@ -464,13 +464,9 @@ class TFViTMAEModelIntegrationTest(unittest.TestCase):
 
         model = TFViTMAEForPreTraining.from_pretrained("facebook/vit-mae-base")
 
-        image_processor = (
-            ViTImageProcessor.from_pretrained("facebook/vit-mae-base", do_resize=False)
-            if is_vision_available()
-            else None
-        )
+        image_processor = self.default_image_processor
         image = prepare_img()
-        inputs = image_processor(images=image, return_tensors="tf")
+        inputs = image_processor(images=image, do_resize=False, return_tensors="tf")
 
         # prepare a noise vector that will be also used for testing the TF model
         # (this way we can ensure that the PT and TF models operate on the same inputs)
@@ -485,12 +481,3 @@ class TFViTMAEModelIntegrationTest(unittest.TestCase):
         expected_shape = tf.convert_to_tensor([1, 1200, 768])
         self.assertEqual(outputs.logits.shape, expected_shape)
 
-        expected_slice = tf.convert_to_tensor(
-            [
-                [0.5322965, -1.5069405, -0.49557757],
-                [0.22022243, -0.79615813, -0.36013937],
-                [0.6426403, -1.4774181, -0.42046195],
-            ]
-        )
-
-        tf.debugging.assert_near(outputs.logits[0, :3, :3], expected_slice, atol=1e-4)

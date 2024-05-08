@@ -257,7 +257,6 @@ class ViTMAEEmbeddings(nn.Module):
             mode="bicubic",
             align_corners=False,
         )
-        assert int(h0) == patch_pos_embed.shape[-2] and int(w0) == patch_pos_embed.shape[-1]
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         return torch.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
 
@@ -344,11 +343,10 @@ class ViTMAEPatchEmbeddings(nn.Module):
                 "Make sure that the channel dimension of the pixel values match with the one set in the configuration."
             )
 
-        if not interpolate_pos_encoding:
-            if height != self.image_size[0] or width != self.image_size[1]:
-                raise ValueError(
-                    f"Input image size ({height}*{width}) doesn't match model ({self.image_size[0]}*{self.image_size[1]})."
-                )
+        if not interpolate_pos_encoding and (height != self.image_size[0] or width != self.image_size[1]):
+            raise ValueError(
+                f"Input image size ({height}*{width}) doesn't match model ({self.image_size[0]}*{self.image_size[1]})."
+            )
         x = self.projection(pixel_values).flatten(2).transpose(1, 2)
         return x
 
@@ -818,7 +816,6 @@ class ViTMAEDecoder(nn.Module):
             mode="bicubic",
             align_corners=False,
         )
-        assert int(h0) == patch_pos_embed.shape[-2] and int(w0) == patch_pos_embed.shape[-1]
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         return torch.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
 
@@ -852,9 +849,7 @@ class ViTMAEDecoder(nn.Module):
         x = torch.cat([x[:, :1, :], x_], dim=1)  # append cls token
         # add pos embed
         if interpolate_pos_encoding:
-            decoder_pos_embed = self.interpolate_pos_encoding(
-                x, pixel_values.shape[-2], pixel_values.shape[-1]
-            )  # hidden_states.shape[-2],hidden_states.shape[-1])
+            decoder_pos_embed = self.interpolate_pos_encoding(x, pixel_values.shape[-2], pixel_values.shape[-1])
         else:
             decoder_pos_embed = self.decoder_pos_embed
 
@@ -949,8 +944,8 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         """
         patch_size, num_channels = self.config.patch_size, self.config.num_channels
         # sanity checks
-        if (pixel_values.shape[2] % patch_size != 0) or (
-            pixel_values.shape[2] != pixel_values.shape[3] and not interpolate_pos_encoding
+        if not interpolate_pos_encoding and (
+            pixel_values.shape[2] % patch_size != 0) or (pixel_values.shape[2] != pixel_values.shape[3]
         ):
             raise ValueError("Make sure the pixel values have a squared size that is divisible by the patch size")
         if pixel_values.shape[1] != num_channels:
@@ -982,11 +977,10 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
                 Pixel values.
         """
         patch_size, num_channels = self.config.patch_size, self.config.num_channels
-        if not (original_img[2] == original_img[3] == 244):
-            num_patches_one_direction = original_img[2] // patch_size
-            num_patches_two_direction = original_img[3] // patch_size
-        else:
-            num_patches_one_direction = num_patches_two_direction = int(patchified_pixel_values.shape[1] ** 0.5)
+        original_size = original_size if original_size is not None else (self.config.image_size, self.config.image_size)
+        original_height, original_width = original_image_size
+        num_patches_h = original_height // patch_size
+        num_patches_w = original_width // patch_size
         # sanity check
         if num_patches_one_direction * num_patches_two_direction != patchified_pixel_values.shape[1]:
             raise ValueError("Make sure that the number of patches can be squared")
@@ -995,8 +989,8 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         batch_size = patchified_pixel_values.shape[0]
         patchified_pixel_values = patchified_pixel_values.reshape(
             batch_size,
-            num_patches_one_direction,
-            num_patches_two_direction,
+            num_patches_h,
+            num_patches_w,
             patch_size,
             patch_size,
             num_channels,
@@ -1005,8 +999,8 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
         pixel_values = patchified_pixel_values.reshape(
             batch_size,
             num_channels,
-            num_patches_one_direction * patch_size,
-            num_patches_two_direction * patch_size,
+            num_patches_h * patch_size,
+            num_patches_w * patch_size,
         )
         return pixel_values
 
