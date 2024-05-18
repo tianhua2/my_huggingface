@@ -348,7 +348,7 @@ class BertSelfAttention(nn.Module):
         #attention_probs[0][7] = my_softmax(attention_scores[0][7])
         def softmax_in_process(x):
             for i in range(len(x)):
-                if i % 2 == 0:
+                if i % 10 == 0:
                     th = nn.Threshold(-1, -100)
                     x[i] = th(x[i])
                     mask = x[i] < -1
@@ -359,9 +359,8 @@ class BertSelfAttention(nn.Module):
 
         for i in range(len(attention_scores)):        #batch
             for j in range(len(attention_scores[i])):     #head
-                print(j)
                 attention_scores[i][j] = softmax_in_process(attention_scores[i][j])
-                
+        print(j)        
         #attention_probs = my_softmax(attention_scores)
         attention_probs = nn.functional.softmax(attention_scores, dim=-1)
         
