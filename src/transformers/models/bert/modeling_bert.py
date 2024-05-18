@@ -360,6 +360,7 @@ class BertSelfAttention(nn.Module):
 
         for i in range(len(attention_scores)):        #batch
             for j in range(len(attention_scores[i])):     #head
+                print(j)
                 attention_scores[i][j] = softmax_in_process(attention_scores[i][j])
                 
         #attention_probs = my_softmax(attention_scores)
