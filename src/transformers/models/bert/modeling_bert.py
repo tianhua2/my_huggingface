@@ -342,7 +342,10 @@ class BertSelfAttention(nn.Module):
             x_exp_sum = torch.sum(x_exp, -1, keepdim=True)
             output_custom = x_exp/x_exp_sum
             return output_custom
+        attention_probs[0][4] = my_softmax(attention_scores[0][4])
         attention_probs[0][5] = my_softmax(attention_scores[0][5])
+        attention_probs[0][6] = my_softmax(attention_scores[0][6])
+        attention_probs[0][7] = my_softmax(attention_scores[0][7])
         
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
