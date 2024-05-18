@@ -335,7 +335,7 @@ class BertSelfAttention(nn.Module):
         # Normalize the attention scores to probabilities.
         #attention_probs = nn.functional.softmax(attention_scores, dim=-1)
         def my_softmax(x):
-            th = nn.Threshold(-4, -100)
+            th = nn.Threshold(0, -100)
             a = th(x)
             maxes = torch.max(a, -1, keepdim=True)[0]
             x_exp = torch.exp(a - maxes)
