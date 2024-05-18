@@ -333,8 +333,17 @@ class BertSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
-
+        #attention_probs = nn.functional.softmax(attention_scores, dim=-1)
+        def my_softmax(x):
+            th = nn.Threshold(-8, 0)
+            a = th(x)
+            maxes = torch.max(a, -1, keepdim=True)[0]
+            x_exp = torch.exp(a - maxes)
+            x_exp_sum = torch.sum(x_exp, -1, keepdim=True)
+            output_custom = x_exp/x_exp_sum
+            return output_custom
+        attention_probs = my_softmax(attention_scores)
+        
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
         attention_probs = self.dropout(attention_probs)
