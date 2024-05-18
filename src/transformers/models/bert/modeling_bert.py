@@ -346,7 +346,24 @@ class BertSelfAttention(nn.Module):
         #attention_probs[0][5] = my_softmax(attention_scores[0][5])
         #attention_probs[0][6] = my_softmax(attention_scores[0][6])
         #attention_probs[0][7] = my_softmax(attention_scores[0][7])
-        attention_probs = my_softmax(attention_scores)
+        def softmax_in_process(x):
+          for i in range(len(x)):
+            if i % 10 == 0:
+              th = nn.Threshold(-4, -100)
+              x[i] = th(x[i])
+              mask = x[i] < -1
+            else:
+              for j in range(len(mask)):
+                if mask[j] == True:
+                  x[i][j] = -100
+          return x
+
+        for i in range(len(attention_scores)):        #batch
+            for j in range(len(attention_scores[i])):     #head
+                attention_scores[i][j] = softmax_in_process(attention_scores[i][j])
+                
+        #attention_probs = my_softmax(attention_scores)
+        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
         
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
