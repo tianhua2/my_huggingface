@@ -349,7 +349,7 @@ class BertSelfAttention(nn.Module):
         def softmax_in_process(x):
             for i in range(len(x)):
                 if i % 10 == 0:
-                    th = nn.Threshold(-1, -100)
+                    th = nn.Threshold(-2, -100)
                     x[i] = th(x[i])
                     mask = x[i] < -1
                     mask = mask.int().float()*(-100)
@@ -358,10 +358,11 @@ class BertSelfAttention(nn.Module):
             return x
 
         for i in range(len(attention_scores)):        #batch
-            for j in range(len(attention_scores[i])):     #head
-                attention_scores[i][j] = softmax_in_process(attention_scores[i][j])
-        #print(j)        
-        #attention_probs = my_softmax(attention_scores)
+            #for j in range(len(attention_scores[i])):     #head
+            #    attention_scores[i][j] = softmax_in_process(attention_scores[i][j])
+            output = list(map(softmax_in_process, torch.unbind(attention_scores[i], 0)))
+            attention_scores[i] = torch.stack(output, 0)
+            
         attention_probs = nn.functional.softmax(attention_scores, dim=-1)
         
         # This is actually dropping out entire tokens to attend to, which might
