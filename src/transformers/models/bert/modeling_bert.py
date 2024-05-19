@@ -349,7 +349,7 @@ class BertSelfAttention(nn.Module):
         def softmax_in_process(x):
             for i in range(len(x)):
                 if i % 5 == 0:
-                    th = nn.Threshold(-4, -100)
+                    th = nn.Threshold(-1, -100)
                     x[i] = th(x[i])
                     mask = x[i] < -1
                     mask = mask.int().float()*(-100)
