@@ -107,10 +107,38 @@ def random_hadamard_matrix(size, device):
 #    return matmul_hadU_cuda(X, hadK, K, transpose=True)
 
 
-
-
 def is_pow2(n):
     return (n & (n - 1) == 0) and (n > 0)
+
+
+def get_minq_maxq(bits: int, sym: bool):
+    if sym:
+        maxq = torch.tensor(2**(bits-1)-1)
+        minq = torch.tensor(-maxq -1)
+    else:
+        maxq = torch.tensor(2**bits - 1)
+        minq = torch.tensor(0)
+
+    return minq, maxq
+
+def asym_quantize_and_pack_i4(x: torch.Tensor):
+    minq, maxq = get_minq_maxq(bits=4, sym=False)
+    xmax = torch.amax(x, dim=-1, keepdim=True)
+    xmin = torch.amin(x, dim=-1, keepdim=True)
+    scale = ((xmax - xmin).clamp(min=1e-5) / maxq)
+    zero = -xmin
+    q = torch.clamp(torch.round((x + zero) / scale), 0, maxq)
+
+    # pack int4
+    q = q.to(dtype=torch.uint8)
+    q = q[..., 0::2] | (q[..., 1::2] << 4)
+    return q, scale, zero
+
+def unpack_i4_and_asym_dequantize(q, scale, zero):
+    #unpack int4
+    assert q.dtype == torch.uint8
+    q = torch.stack((q & 0x0f, (q >> 4) & 0x0f), dim=-1).view(*q.shape[:-1], q.shape[-1] * 2)
+    return q * scale - zero
 
 
 # hadamard matrices for had12, had36.pal2, had52,will, 
