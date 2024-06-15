@@ -331,6 +331,10 @@ class GPT2Attention(nn.Module):
         query = self._split_heads(query, self.num_heads, self.head_dim)
         key = self._split_heads(key, self.num_heads, self.head_dim)
         value = self._split_heads(value, self.num_heads, self.head_dim)
+
+        HADAMARD = self.config.HADAMARD
+        QUANTIZE = self.config.QUANTIZE
+        
         if HADAMARD:
           key_had = matmul_hadU(key)
           value_had = matmul_hadU(value)
