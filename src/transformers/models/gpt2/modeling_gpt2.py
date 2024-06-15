@@ -360,10 +360,8 @@ class GPT2Attention(nn.Module):
           key_dehad_dq = key_dq
           value_dehad_dq = value_dq
 
-        if layer_past is not None:
-            past_key, past_value = layer_past
-            key = torch.cat((past_key, key), dim=-2)
-            value = torch.cat((past_value, value), dim=-2)
+        key = key_dehad_dq
+        value = value_dehad_dq
 
         if layer_past is not None:
             past_key, past_value = layer_past
