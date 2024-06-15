@@ -65,6 +65,7 @@ _CONFIG_FOR_DOC = "GPT2Config"
 
 from ..deprecated._archive_maps import GPT2_PRETRAINED_MODEL_ARCHIVE_LIST  # noqa: F401, E402
 
+from hadamard import matmul_hadU, matmul_hadUt, get_minq_maxq, asym_quantize_and_pack_i4, unpack_i4_and_asym_dequantize
 
 # Copied from transformers.models.llama.modeling_llama._get_unpad_data
 def _get_unpad_data(attention_mask):
