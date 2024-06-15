@@ -331,6 +331,35 @@ class GPT2Attention(nn.Module):
         query = self._split_heads(query, self.num_heads, self.head_dim)
         key = self._split_heads(key, self.num_heads, self.head_dim)
         value = self._split_heads(value, self.num_heads, self.head_dim)
+        if HADAMARD:
+          key_had = matmul_hadU(key)
+          value_had = matmul_hadU(value)
+        else:
+          key_had = key
+          value_had = value
+
+        if QUANTIZE:
+          key_had_q, scale_key_list[layer], zero_key_list[layer] = asym_quantize_and_pack_i4(key_had)
+          value_had_q, scale_value_list[layer], zero_value_list[layer] = asym_quantize_and_pack_i4(value_had)
+          key_dq = unpack_i4_and_asym_dequantize(key_had_q, scale_key_list[layer], zero_key_list[layer])
+          value_dq = unpack_i4_and_asym_dequantize(value_had_q, scale_value_list[layer], zero_value_list[layer])
+        else:
+          key_had_q = key_had
+          value_had_q = value_had
+          key_dq = key_had_q
+          value_dq = value_had_q
+        print(HADAMARD)
+        if HADAMARD:
+          key_dehad_dq = matmul_hadUt(key_dq)
+          value_dehad_dq = matmul_hadUt(value_dq)
+        else:
+          key_dehad_dq = key_dq
+          value_dehad_dq = value_dq
+
+        if layer_past is not None:
+            past_key, past_value = layer_past
+            key = torch.cat((past_key, key), dim=-2)
+            value = torch.cat((past_value, value), dim=-2)
 
         if layer_past is not None:
             past_key, past_value = layer_past
