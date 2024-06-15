@@ -162,8 +162,6 @@ class GPT2Config(PretrainedConfig):
         scale_attn_by_inverse_layer_idx=False,
         reorder_and_upcast_attn=False,
         **kwargs,
-        HADAMARD=False,
-        QUANTIZE=False,
     ):
         self.vocab_size = vocab_size
         self.n_positions = n_positions
@@ -190,8 +188,6 @@ class GPT2Config(PretrainedConfig):
         self.bos_token_id = bos_token_id
         self.eos_token_id = eos_token_id
 
-        self.HADAMARD=HADAMARD
-        self.QUANTIZE=QUANTIZE
         super().__init__(bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 
 
