@@ -55,6 +55,7 @@ if is_flash_attn_2_available():
     from flash_attn import flash_attn_func, flash_attn_varlen_func
     from flash_attn.bert_padding import index_first_axis, pad_input, unpad_input  # noqa
 
+from .hadamard import matmul_hadU, matmul_hadUt, get_minq_maxq, asym_quantize_and_pack_i4, unpack_i4_and_asym_dequantize
 
 logger = logging.get_logger(__name__)
 
@@ -359,6 +360,37 @@ class LlamaAttention(nn.Module):
         past_key_value = getattr(self, "past_key_value", past_key_value)
         cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+        
+        HADAMARD = self.config.output_attentions
+        QUANTIZE = self.config.output_hidden_states
+        
+        if HADAMARD:
+          key_had = matmul_hadU(key_states)
+          value_had = matmul_hadU(value_states)
+        else:
+          key_had = key_states
+          value_had = value_states
+
+        if QUANTIZE:
+          key_had_q, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_had)
+          value_had_q, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_had)
+          key_dq = unpack_i4_and_asym_dequantize(key_had_q, scale_key_list, zero_key_list)
+          value_dq = unpack_i4_and_asym_dequantize(value_had_q, scale_value_list, zero_value_list)
+        else:
+          key_had_q = key_had
+          value_had_q = value_had
+          key_dq = key_had_q
+          value_dq = value_had_q
+        
+        if HADAMARD:
+          key_dehad_dq = matmul_hadUt(key_dq)
+          value_dehad_dq = matmul_hadUt(value_dq)
+        else:
+          key_dehad_dq = key_dq
+          value_dehad_dq = value_dq
+
+        key_states = key_dehad_dq
+        value_states = value_dehad_dq
 
         if past_key_value is not None:
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
