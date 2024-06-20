@@ -334,7 +334,9 @@ class GPT2Attention(nn.Module):
 
         HADAMARD = self.config.output_attentions
         QUANTIZE = self.config.output_hidden_states
-        
+
+        key=torch.transpose(key,-1,-2)
+        value=torch.transpose(value,-1,-2)
         if HADAMARD:
           key_had = matmul_hadU(key)
           value_had = matmul_hadU(value)
@@ -362,7 +364,9 @@ class GPT2Attention(nn.Module):
 
         key = key_dehad_dq
         value = value_dehad_dq
-
+        key=torch.transpose(key,-1,-2)
+        value=torch.transpose(value,-1,-2)
+        
         if layer_past is not None:
             past_key, past_value = layer_past
             key = torch.cat((past_key, key), dim=-2)
