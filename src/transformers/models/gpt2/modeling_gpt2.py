@@ -346,13 +346,13 @@ class GPT2Attention(nn.Module):
 
         if QUANTIZE:
           key_had=torch.transpose(key_had,-1,-2)
-          value_had=torch.transpose(value_had,-1,-2)
+          #value_had=torch.transpose(value_had,-1,-2)
           key_had_q, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_had)
           value_had_q, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_had)
           key_dq = unpack_i4_and_asym_dequantize(key_had_q, scale_key_list, zero_key_list)
           value_dq = unpack_i4_and_asym_dequantize(value_had_q, scale_value_list, zero_value_list)
           key_dq=torch.transpose(key_dq,-1,-2)
-          value_dq=torch.transpose(value_dq,-1,-2)  
+          #value_dq=torch.transpose(value_dq,-1,-2)  
         else:
           key_had_q = key_had
           value_had_q = value_had
