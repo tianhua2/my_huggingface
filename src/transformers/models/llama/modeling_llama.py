@@ -387,11 +387,7 @@ class LlamaAttention(nn.Module):
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
-        ### Heavy + Recent
-        heavy_budget_ratio = 0.2
-        recent_budget_ratio = 0.2
-        heavy_budget = int(heavy_budget_ratio * key_states.shape[-1])
-        recent_budget = int(recent_budget_ratio * key_states.shape[-1])
+
         #print("heavy_budget: " + str(heavy_budget))
         
         kv_seq_len = key_states.shape[-2]
@@ -411,6 +407,13 @@ class LlamaAttention(nn.Module):
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             attn_weights = attn_weights + causal_mask
+            attn_weights = torch.max(attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min))
+            
+        ### Heavy + Recent
+        heavy_budget_ratio = 0.2
+        recent_budget_ratio = 0.2
+        heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
+        recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
         
         # Heavy Hitter Mask (Based on global statistics)
         tmp_attn = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(attn_weights.dtype)
