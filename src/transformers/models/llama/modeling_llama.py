@@ -390,9 +390,9 @@ class LlamaAttention(nn.Module):
         ### Heavy + Recent
         heavy_budget_ratio = 0.2
         recent_budget_ratio = 0.2
-        heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
-        recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
-        print("heavy_budget: " + str(heavy_budget))
+        heavy_budget = int(heavy_budget_ratio * key_states.shape[-1])
+        recent_budget = int(recent_budget_ratio * key_states.shape[-1])
+        #print("heavy_budget: " + str(heavy_budget))
         
         kv_seq_len = key_states.shape[-2]
         if kv_seq_len % 128 == 0 and kv_seq_len != 0:
