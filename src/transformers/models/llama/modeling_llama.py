@@ -386,6 +386,21 @@ class LlamaAttention(nn.Module):
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+
+        ### Heavy + Recent
+        heavy_budget_ratio = 0.2
+        recent_budget_ratio = 0.2
+        heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
+        recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
+        
+        kv_seq_len = key_states.shape[-2]
+        if kv_seq_len % 128 == 0 and kv_seq_len != 0:
+            key_states_old = key_states[:-127,:].to(torch.int8)
+            key_states_old = key_states_old.to(key_states.dtype)
+            key_states[:-127,:] = key_states_old
+            value_states_old = value_states[:-127,:].to(torch.int8)
+            value_states_old = value_states_old.to(value_states.dtype)
+            value_states[:-127,:] = value_states_old
             
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
@@ -395,7 +410,23 @@ class LlamaAttention(nn.Module):
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             attn_weights = attn_weights + causal_mask
+        
+        # Heavy Hitter Mask (Based on global statistics)
+        tmp_attn = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(attn_weights.dtype)
+        tmp_sum = torch.sum(tmp_attn, dim=-2) 
+        _, tmp_topk = tmp_sum.topk(k=heavy_budget, dim=-1)
 
+        zeros = torch.zeros_like(tmp_sum, dtype=torch.bool)
+        mask_bottom = zeros.scatter(-1, tmp_topk, True).unsqueeze(2)
+        mask_bottom = mask_bottom.expand(mask_bottom.shape[0], mask_bottom.shape[1], attn_weights.shape[-2], mask_bottom.shape[-1])
+
+        ones = torch.ones_like(attn_weights, dtype=torch.bool)
+        ones = torch.tril(ones, diagonal=recent_budget)
+        ones = torch.triu(ones, diagonal=-recent_budget)
+        mask_bottom = torch.logical_or(mask_bottom, ones)
+        # mask_bottom = ones
+        attn_weights[~mask_bottom] = torch.finfo(attn_weights.dtype).min
+        
         # upcast attention to fp32
         attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
         attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
