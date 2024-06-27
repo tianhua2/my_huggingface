@@ -363,7 +363,7 @@ class LlamaAttention(nn.Module):
         past_key_value = getattr(self, "past_key_value", past_key_value)
         cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
-        print(query_states.shape, key_states.shape)
+        print(1, query_states.shape, key_states.shape)
         HADAMARD = False #self.config.output_attentions
         QUANTIZE = False #self.config.output_hidden_states
         
@@ -386,7 +386,7 @@ class LlamaAttention(nn.Module):
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
-
+         print(2, query_states.shape, key_states.shape)
 
         #print("heavy_budget: " + str(heavy_budget))
         
@@ -403,9 +403,11 @@ class LlamaAttention(nn.Module):
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
-
+        print(3, attn_weights.shape)
+        print(4, attention_mask.shape)
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+            print(5, causal_mask.shape)
             attn_weights = attn_weights + causal_mask
             attn_weights = torch.max(attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min))
             
