@@ -410,28 +410,30 @@ class LlamaAttention(nn.Module):
             #print(5, causal_mask.shape)
             attn_weights = attn_weights + causal_mask
             attn_weights = torch.max(attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min))
-            
-        ### Heavy + Recent
-        heavy_budget_ratio = 0.2
-        recent_budget_ratio = 0.2
-        heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
-        recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
+
+        H2O = False
+        if H2O:
+            ### Heavy + Recent
+            heavy_budget_ratio = 0.2
+            recent_budget_ratio = 0.2
+            heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
+            recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
         
-        # Heavy Hitter Mask (Based on global statistics)
-        tmp_attn = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(attn_weights.dtype)
-        tmp_sum = torch.sum(tmp_attn, dim=-2) 
-        _, tmp_topk = tmp_sum.topk(k=heavy_budget, dim=-1)
+            # Heavy Hitter Mask (Based on global statistics)
+            tmp_attn = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(attn_weights.dtype)
+            tmp_sum = torch.sum(tmp_attn, dim=-2) 
+            _, tmp_topk = tmp_sum.topk(k=heavy_budget, dim=-1)
 
-        zeros = torch.zeros_like(tmp_sum, dtype=torch.bool)
-        mask_bottom = zeros.scatter(-1, tmp_topk, True).unsqueeze(2)
-        mask_bottom = mask_bottom.expand(mask_bottom.shape[0], mask_bottom.shape[1], attn_weights.shape[-2], mask_bottom.shape[-1])
+            zeros = torch.zeros_like(tmp_sum, dtype=torch.bool)
+            mask_bottom = zeros.scatter(-1, tmp_topk, True).unsqueeze(2)
+            mask_bottom = mask_bottom.expand(mask_bottom.shape[0], mask_bottom.shape[1], attn_weights.shape[-2], mask_bottom.shape[-1])
 
-        ones = torch.ones_like(attn_weights, dtype=torch.bool)
-        ones = torch.tril(ones, diagonal=recent_budget)
-        ones = torch.triu(ones, diagonal=-recent_budget)
-        mask_bottom = torch.logical_or(mask_bottom, ones)
-        # mask_bottom = ones
-        attn_weights[~mask_bottom] = torch.finfo(attn_weights.dtype).min
+            ones = torch.ones_like(attn_weights, dtype=torch.bool)
+            ones = torch.tril(ones, diagonal=recent_budget)
+            ones = torch.triu(ones, diagonal=-recent_budget)
+            mask_bottom = torch.logical_or(mask_bottom, ones)
+            # mask_bottom = ones
+            attn_weights[~mask_bottom] = torch.finfo(attn_weights.dtype).min
         
         # upcast attention to fp32
         attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
