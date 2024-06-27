@@ -391,13 +391,15 @@ class LlamaAttention(nn.Module):
         #print("heavy_budget: " + str(heavy_budget))
         
         kv_seq_len = key_states.shape[-2]
-        #if kv_seq_len % 128 == 0 and kv_seq_len != 0:
-        #    key_states_old = key_states[:-127,:].to(torch.int8)
-        #    key_states_old = key_states_old.to(key_states.dtype)
-        #    key_states[:-127,:] = key_states_old
-        #    value_states_old = value_states[:-127,:].to(torch.int8)
-        #    value_states_old = value_states_old.to(value_states.dtype)
-        #    value_states[:-127,:] = value_states_old
+        old_token_len = int(kv_seq_len * 0.6)
+        REFRESH = True
+        if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
+            #key_states_old = key_states[:old_token_len,:].to(torch.int8)
+            #key_states_old = key_states_old.to(key_states.dtype)
+            key_states[:old_token_len,:] = key_states[:old_token_len,:].to(torch.int8).to(key_states.dtype)
+            #value_states_old = value_states[:-127,:].to(torch.int8)
+            #value_states_old = value_states_old.to(value_states.dtype)
+            value_states[:-old_token_len,:] = value_states[:old_token_len,:].to(torch.int8).to(value_states.dtype)
             
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
