@@ -386,7 +386,7 @@ class LlamaAttention(nn.Module):
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
-         print(2, query_states.shape, key_states.shape)
+        print(2, query_states.shape, key_states.shape)
 
         #print("heavy_budget: " + str(heavy_budget))
         
