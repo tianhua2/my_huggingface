@@ -363,7 +363,7 @@ class LlamaAttention(nn.Module):
         past_key_value = getattr(self, "past_key_value", past_key_value)
         cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
-        
+        print(query_states.shape, key_states.shape)
         HADAMARD = False #self.config.output_attentions
         QUANTIZE = False #self.config.output_hidden_states
         
@@ -706,7 +706,7 @@ class LlamaSdpaAttention(LlamaAttention):
 
         cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
-
+        print(query_states.shape, key_states.shape)
         # In case static cache is used, it is an instance attribute.
         past_key_value = getattr(self, "past_key_value", past_key_value)
 
