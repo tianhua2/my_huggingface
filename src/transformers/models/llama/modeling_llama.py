@@ -406,7 +406,7 @@ class LlamaAttention(nn.Module):
             key_states_refresh = matmul_hadU(key_states[:,:,old_token_begin:old_token_end,:])
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
-            key_states[:,:old_token_begin,:old_token_end,:] = matmul_hadUt(key_states_refresh)
+            key_states[:,:,old_token_begin:old_token_end,:] = matmul_hadUt(key_states_refresh)
 
             value_states_refresh = matmul_hadU(value_states[:,:,old_token_begin:old_token_end,:])
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh)
