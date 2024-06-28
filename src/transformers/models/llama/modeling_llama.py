@@ -389,7 +389,7 @@ class LlamaAttention(nn.Module):
         #print(2, query_states.shape, key_states.shape)
 
         #print("heavy_budget: " + str(heavy_budget))
-        
+        print(key_states.shape, value_states.shape)
         kv_seq_len = key_states.shape[-2]
         old_token_len = int(kv_seq_len * 0.6)
         REFRESH = True
