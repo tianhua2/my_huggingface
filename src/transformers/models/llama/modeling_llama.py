@@ -399,7 +399,7 @@ class LlamaAttention(nn.Module):
             key_states[:old_token_len,:] = key_states[:old_token_len,:].to(torch.int8).to(key_states.dtype)
             #value_states_old = value_states[:-127,:].to(torch.int8)
             #value_states_old = value_states_old.to(value_states.dtype)
-            value_states[:-old_token_len,:] = value_states[:old_token_len,:].to(torch.int8).to(value_states.dtype)
+            #value_states[:-old_token_len,:] = value_states[:old_token_len,:].to(torch.int8).to(value_states.dtype)
             
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
