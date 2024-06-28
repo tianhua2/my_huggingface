@@ -391,8 +391,8 @@ class LlamaAttention(nn.Module):
         #print("heavy_budget: " + str(heavy_budget))
         #print(key_states.shape, value_states.shape)
         kv_seq_len = key_states.shape[-2]
-        old_token_end = int(kv_seq_len * 0.8)
-        old_token_begin = int(kv_seq_len * 0.6)
+        old_token_end = int(kv_seq_len * 0.9)
+        old_token_begin = int(kv_seq_len * 0.8)
         REFRESH = True
         #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
         if REFRESH:
@@ -428,8 +428,8 @@ class LlamaAttention(nn.Module):
         H2O = True
         if H2O:
             ### Heavy + Recent
-            heavy_budget_ratio = 0.2
-            recent_budget_ratio = 0.2
+            heavy_budget_ratio = 0.1
+            recent_budget_ratio = 0.1
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
         
