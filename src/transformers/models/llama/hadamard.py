@@ -137,7 +137,8 @@ def asym_quantize_and_pack_i4(x: torch.Tensor):
 def unpack_i4_and_asym_dequantize(q, scale, zero):
     #unpack int4
     assert q.dtype == torch.uint8
-    q = torch.stack((q & 0x0f, (q >> 4) & 0x0f), dim=-1).view(*q.shape[:-1], q.shape[-1] * 2)
+    #q = torch.stack((q & 0x0f, (q >> 4) & 0x0f), dim=-1).view(*q.shape[:-1], q.shape[-1] * 2)
+    q = torch.stack((q & 0x0c, (q >> 4) & 0x0c), dim=-1).view(*q.shape[:-1], q.shape[-1] * 2)
     return q * scale - zero
 
 
