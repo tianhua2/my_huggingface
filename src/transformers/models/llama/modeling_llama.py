@@ -391,7 +391,8 @@ class LlamaAttention(nn.Module):
         #print("heavy_budget: " + str(heavy_budget))
         #print(key_states.shape, value_states.shape)
         kv_seq_len = key_states.shape[-2]
-        old_token_len = int(kv_seq_len * 0.6)
+        old_token_end = int(kv_seq_len * 0.8)
+        old_token_begin = int(kv_seq_len * 0.2)
         REFRESH = True
         #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
         if REFRESH:
@@ -401,15 +402,16 @@ class LlamaAttention(nn.Module):
             #value_states_old = value_states[:-127,:].to(torch.int8)
             #value_states_old = value_states_old.to(value_states.dtype)
             #value_states[:,:,:old_token_len,:] = value_states[:,:,:old_token_len,:].to(torch.int8).to(value_states.dtype)
-            key_states_refresh = matmul_hadU(key_states[:,:,:old_token_len,:])
+            
+            key_states_refresh = matmul_hadU(key_states[:,:,old_token_begin:old_token_end,:])
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
-            key_states[:,:,:old_token_len,:] = matmul_hadUt(key_states_refresh)
+            key_states[:,:old_token_begin,:old_token_end,:] = matmul_hadUt(key_states_refresh)
 
-            value_states_refresh = matmul_hadU(value_states[:,:,:old_token_len,:])
+            value_states_refresh = matmul_hadU(value_states[:,:,old_token_begin:old_token_end,:])
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
-            value_states[:,:,:old_token_len,:] = matmul_hadUt(value_states_refresh)
+            value_states[:,:,old_token_begin:old_token_end,:] = matmul_hadUt(value_states_refresh)
             
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
