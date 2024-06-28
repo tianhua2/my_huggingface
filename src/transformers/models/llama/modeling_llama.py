@@ -364,24 +364,7 @@ class LlamaAttention(nn.Module):
         cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
         #print(1, query_states.shape, key_states.shape)
-        HADAMARD = False #self.config.output_attentions
-        QUANTIZE = False #self.config.output_hidden_states
         
-        if HADAMARD:
-          key_states = matmul_hadU(key_states)
-          value_states = matmul_hadU(value_states)
-
-        if QUANTIZE:
-          key_states, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states)
-          value_states, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states)
-          key_states = unpack_i4_and_asym_dequantize(key_states, scale_key_list, zero_key_list)
-          value_states = unpack_i4_and_asym_dequantize(value_states, scale_value_list, zero_value_list)
-
-        
-        if HADAMARD:
-          key_states = matmul_hadUt(key_states)
-          value_states = matmul_hadUt(value_states)
-
         if past_key_value is not None:
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
@@ -396,13 +379,6 @@ class LlamaAttention(nn.Module):
         REFRESH = True
         #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
         if REFRESH:
-            #key_states_old = key_states[:old_token_len,:].to(torch.int8)
-            #key_states_old = key_states_old.to(key_states.dtype)
-            #key_states[:,:,:old_token_len,:] = key_states[:,:,:old_token_len,:].to(torch.int8).to(key_states.dtype)
-            #value_states_old = value_states[:-127,:].to(torch.int8)
-            #value_states_old = value_states_old.to(value_states.dtype)
-            #value_states[:,:,:old_token_len,:] = value_states[:,:,:old_token_len,:].to(torch.int8).to(value_states.dtype)
-            
             key_states_refresh = matmul_hadU(key_states[:,:,old_token_begin:old_token_end,:])
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
@@ -432,7 +408,10 @@ class LlamaAttention(nn.Module):
             recent_budget_ratio = 0.2
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
-        
+            if heavy_budget > 256:
+                heavy_budget = 256
+            if recent_budget > 256:
+                recent_budget = 256
             # Heavy Hitter Mask (Based on global statistics)
             tmp_attn = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(attn_weights.dtype)
             tmp_sum = torch.sum(tmp_attn, dim=-2) 
