@@ -389,17 +389,27 @@ class LlamaAttention(nn.Module):
         #print(2, query_states.shape, key_states.shape)
 
         #print("heavy_budget: " + str(heavy_budget))
-        print(key_states.shape, value_states.shape)
+        #print(key_states.shape, value_states.shape)
         kv_seq_len = key_states.shape[-2]
         old_token_len = int(kv_seq_len * 0.6)
         REFRESH = True
-        if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
+        #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
+        if REFRESH:
             #key_states_old = key_states[:old_token_len,:].to(torch.int8)
             #key_states_old = key_states_old.to(key_states.dtype)
-            key_states[:,:,:old_token_len,:] = key_states[:,:,:old_token_len,:].to(torch.int8).to(key_states.dtype)
+            #key_states[:,:,:old_token_len,:] = key_states[:,:,:old_token_len,:].to(torch.int8).to(key_states.dtype)
             #value_states_old = value_states[:-127,:].to(torch.int8)
             #value_states_old = value_states_old.to(value_states.dtype)
-            value_states[:,:,:old_token_len,:] = value_states[:,:,:old_token_len,:].to(torch.int8).to(value_states.dtype)
+            #value_states[:,:,:old_token_len,:] = value_states[:,:,:old_token_len,:].to(torch.int8).to(value_states.dtype)
+            key_states[:,:,:old_token_len,:] = matmul_hadU(key_states[:,:,:old_token_len,:])
+            key_states[:,:,:old_token_len,:], scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states[:,:,:old_token_len,:])
+            key_states[:,:,:old_token_len,:] = unpack_i4_and_asym_dequantize(key_states[:,:,:old_token_len,:], scale_key_list, zero_key_list)
+            key_states[:,:,:old_token_len,:] = matmul_hadUt(key_states[:,:,:old_token_len,:])
+
+            value_states[:,:,:old_token_len,:] = matmul_hadU(value_states[:,:,:old_token_len,:])
+            value_states[:,:,:old_token_len,:], scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states[:,:,:old_token_len,:])
+            value_states[:,:,:old_token_len,:] = unpack_i4_and_asym_dequantize(value_states[:,:,:old_token_len,:], scale_value_list, zero_value_list)
+            value_states[:,:,:old_token_len,:] = matmul_hadUt(value_states[:,:,:old_token_len,:])
             
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
