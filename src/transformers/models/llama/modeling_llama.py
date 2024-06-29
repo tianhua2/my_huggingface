@@ -376,7 +376,7 @@ class LlamaAttention(nn.Module):
         kv_seq_len = key_states.shape[-2]
         old_token_end = int(kv_seq_len * 0.9)
         old_token_begin = int(kv_seq_len * 0.8)
-        REFRESH = False
+        REFRESH = True
         #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
         if REFRESH:
             key_states_refresh = matmul_hadU(key_states[:,:,old_token_begin:old_token_end,:])
