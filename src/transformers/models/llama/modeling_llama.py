@@ -376,7 +376,7 @@ class LlamaAttention(nn.Module):
         kv_seq_len = key_states.shape[-2]
         old_token_end = int(kv_seq_len * 0.9)
         old_token_begin = int(kv_seq_len * 0.8)
-        REFRESH = True
+        REFRESH = False
         #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
         if REFRESH:
             key_states_refresh = matmul_hadU(key_states[:,:,old_token_begin:old_token_end,:])
@@ -401,7 +401,7 @@ class LlamaAttention(nn.Module):
             attn_weights = attn_weights + causal_mask
             attn_weights = torch.max(attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min))
 
-        H2O = True
+        H2O = False
         if H2O:
             ### Heavy + Recent
             heavy_budget_ratio = 0.2
