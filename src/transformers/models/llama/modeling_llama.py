@@ -405,7 +405,7 @@ class LlamaAttention(nn.Module):
         if H2O:
             ### Heavy + Recent
             heavy_budget_ratio = 0.2
-            recent_budget_ratio = 0.2
+            recent_budget_ratio = 0.1
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
             if heavy_budget > 256:
