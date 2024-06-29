@@ -122,7 +122,7 @@ def get_minq_maxq(bits: int, sym: bool):
     return minq, maxq
 
 def asym_quantize_and_pack_i4(x: torch.Tensor):
-    minq, maxq = get_minq_maxq(bits=8, sym=False)
+    minq, maxq = get_minq_maxq(bits=4, sym=False)
     xmax = torch.amax(x, dim=-1, keepdim=True)
     xmin = torch.amin(x, dim=-1, keepdim=True)
     scale = ((xmax - xmin).clamp(min=1e-5) / maxq)
@@ -130,13 +130,13 @@ def asym_quantize_and_pack_i4(x: torch.Tensor):
     q = torch.clamp(torch.round((x + zero) / scale), 0, maxq)
 
     # pack int4
-    q = q.to(dtype=torch.uint8)
+    #q = q.to(dtype=torch.uint8)
     #q = q[..., 0::2] | (q[..., 1::2] << 4)
     return q, scale, zero
 
 def unpack_i4_and_asym_dequantize(q, scale, zero):
     #unpack int4
-    assert q.dtype == torch.uint8
+    #assert q.dtype == torch.uint8
     #q = torch.stack((q & 0x0f, (q >> 4) & 0x0f), dim=-1).view(*q.shape[:-1], q.shape[-1] * 2)
     #q = torch.stack((q & 0x0c, (q >> 4) & 0x0c), dim=-1).view(*q.shape[:-1], q.shape[-1] * 2)
     return q * scale - zero
