@@ -380,7 +380,7 @@ class LlamaAttention(nn.Module):
         #    old_token_begin = -256
         #    old_token_end = -128
         old_token_end = -1
-        old_token_begin = 0
+        old_token_begin = int(kv_seq_len * 0.2)
         REFRESH = True
         KV_BITS=2
         #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
