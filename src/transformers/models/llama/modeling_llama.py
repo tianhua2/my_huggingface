@@ -400,12 +400,15 @@ class LlamaAttention(nn.Module):
 
         #Dynamic Quantization
         DYNQ=True
+        # MatMul original key query to get attention weights
         attn_weights_temp = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+        # Attention Mask
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             #print(5, causal_mask.shape)
             attn_weights_temp = attn_weights_temp + causal_mask
             attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
+            
         if DYNQ:
             KV_BITS1=16
             KV_BITS2=4
@@ -414,23 +417,29 @@ class LlamaAttention(nn.Module):
             value_states1=value_states.detach().clone()
             heavy_budget_ratio1 = 1
             heavy_budget1 = int(heavy_budget_ratio1 * attn_weights_temp.shape[-1])
+            # Original Softmax result
             tmp_attn1 = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights_temp.dtype)
+            
+            # Sum the original attention score of one token 
             tmp_sum1 = torch.sum(tmp_attn1, dim=-2) 
+            
+            # Create a mask that will keep the topk tokens' KV, other KV will be assigned to 0
             _, tmp_topk1 = tmp_sum1.topk(k=heavy_budget1, dim=-1)
             zeros1 = torch.zeros_like(tmp_sum1, dtype=torch.bool)
             mask_bottom1 = zeros1.scatter(-1, tmp_topk1, True).unsqueeze(2).transpose(-2,-1)
             mask_bottom1 = mask_bottom1.expand(mask_bottom1.shape[0], mask_bottom1.shape[1], attn_weights_temp.shape[-2], key_states.shape[-1])
             key_states1[~mask_bottom1]=0
             value_states1[~mask_bottom1]=0
+            
             #print('masked key_states1')
             #print(key_states1)
             #print(key_states1.shape)
-            key_states_refresh = matmul_hadU(key_states1)
-            #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS1)
-            key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS1)
-            key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
-            #key_states1 = matmul_hadUt(torch.transpose(key_states_refresh,-2,-1))
-            key_states1 = matmul_hadUt(key_states_refresh)
+            
+            #Quantize masked key
+            #key_states_refresh = matmul_hadU(key_states1)
+            #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS1)
+            #key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
+            #key_states1 = matmul_hadUt(key_states_refresh)
             #key_states1[~mask_bottom1]=0
             print('original key_state')
             print(key_states)
@@ -438,12 +447,14 @@ class LlamaAttention(nn.Module):
             print('quantized key_states1')
             print(key_states1)
             print(key_states1.shape)
-            value_states_refresh = matmul_hadU(value_states1)
-            value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS1)
-            value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
-            value_states1 = matmul_hadUt(value_states_refresh)
-            
 
+            #Quantize masked value
+            #value_states_refresh = matmul_hadU(value_states1)
+            #value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS1)
+            #value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
+            #value_states1 = matmul_hadUt(value_states_refresh)
+            
+            # Below is not used
             key_states2=key_states.detach().clone()
             value_states2=value_states.detach().clone()
             heavy_budget_ratio2 = 0.2
@@ -485,7 +496,8 @@ class LlamaAttention(nn.Module):
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS3)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             value_states3 = matmul_hadUt(value_states_refresh)
-
+            #Above is not used
+            
             key_states = key_states1
             value_states = value_states1
             #key_states = key_states1 + key_states2 + key_states3
