@@ -125,7 +125,7 @@ def asym_quantize_and_pack_i4(x: torch.Tensor, bits: int):
     minq, maxq = get_minq_maxq(bits=bits, sym=False)
     xmax = torch.amax(x, dim=-1, keepdim=True)
     xmin = torch.amin(x, dim=-1, keepdim=True)
-    scale = (((xmax - xmin)*0.9).clamp(min=1e-5) / maxq)
+    scale = (((xmax - xmin)).clamp(min=1e-5) / maxq)
     zero = -xmin
     q = torch.clamp(torch.round((x + zero) / scale), 0, maxq)
 
