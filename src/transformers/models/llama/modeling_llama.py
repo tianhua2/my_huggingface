@@ -407,12 +407,12 @@ class LlamaAttention(nn.Module):
             attn_weights_temp = attn_weights_temp + causal_mask
             attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
         if DYNQ:
-            KV_BITS1=8
+            KV_BITS1=16
             KV_BITS2=4
             KV_BITS3=2
             key_states1=key_states.detach().clone()
             value_states1=value_states.detach().clone()
-            heavy_budget_ratio1 = 0.1
+            heavy_budget_ratio1 = 1
             heavy_budget1 = int(heavy_budget_ratio1 * attn_weights_temp.shape[-1])
             tmp_attn1 = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights_temp.dtype)
             tmp_sum1 = torch.sum(tmp_attn1, dim=-2) 
@@ -442,6 +442,8 @@ class LlamaAttention(nn.Module):
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS1)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             value_states1 = matmul_hadUt(value_states_refresh)
+            print(torch.mean(value_states1-value_states))
+            print(torch.mean(key_states1-key_states))
 
             key_states2=key_states.detach().clone()
             value_states2=value_states.detach().clone()
@@ -485,8 +487,8 @@ class LlamaAttention(nn.Module):
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             value_states3 = matmul_hadUt(value_states_refresh)
 
-            key_states = key_states1 + key_states2 + key_states3
-            value_states = value_states1 + value_states2 + value_states3
+            #key_states = key_states1 + key_states2 + key_states3
+            #value_states = value_states1 + value_states2 + value_states3
             
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
         #print(3, attn_weights.shape)
