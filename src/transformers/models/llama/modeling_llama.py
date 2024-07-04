@@ -413,9 +413,12 @@ class LlamaAttention(nn.Module):
             KV_BITS1=8
             KV_BITS2=4
             KV_BITS3=2
+            heavy_budget_ratio1 = 0.1
+            heavy_budget_ratio2 = 0.3
+            
             key_states1=key_states.detach().clone()
-            value_states1=value_states.detach().clone()
-            heavy_budget_ratio1 = 1
+            value_states1=value_states.detach().clone()    
+            
             heavy_budget1 = int(heavy_budget_ratio1 * attn_weights_temp.shape[-1])
             # Original Softmax result
             tmp_attn1 = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights_temp.dtype)
@@ -443,12 +446,12 @@ class LlamaAttention(nn.Module):
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
             key_states1 = matmul_hadUt(key_states_refresh)
             #key_states1[~mask_bottom1]=0
-            print('original key_state')
-            print(key_states)
-            print(key_states.shape)
-            print('quantized key_states1')
-            print(key_states1)
-            print(key_states1.shape)
+            #print('original key_state')
+            #print(key_states)
+            #print(key_states.shape)
+            #print('quantized key_states1')
+            #print(key_states1)
+            #print(key_states1.shape)
 
             #Quantize masked value
             value_states_refresh = matmul_hadU(value_states1)
@@ -459,7 +462,7 @@ class LlamaAttention(nn.Module):
             # Below is not used
             key_states2=key_states.detach().clone()
             value_states2=value_states.detach().clone()
-            heavy_budget_ratio2 = 0.2
+
             heavy_budget2 = int(heavy_budget_ratio2 * attn_weights_temp.shape[-1])
             tmp_attn2 = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights_temp.dtype)
             tmp_sum2 = torch.sum(tmp_attn2, dim=-2) 
@@ -484,7 +487,7 @@ class LlamaAttention(nn.Module):
 
             key_states3=key_states.detach().clone()
             value_states3=value_states.detach().clone()
-            mask_bottom3 = torch.logical_and(mask_bottom2, mask_bottom1)
+            mask_bottom3 = torch.logical_or(mask_bottom2, mask_bottom1)
             key_states3[mask_bottom3] = 0
             value_states3[mask_bottom3] = 0
             key_states_refresh = matmul_hadU(key_states3)
@@ -500,10 +503,10 @@ class LlamaAttention(nn.Module):
             value_states3 = matmul_hadUt(value_states_refresh)
             #Above is not used
             
-            key_states = key_states1
-            value_states = value_states1
-            #key_states = key_states1 + key_states2 + key_states3
-            #value_states = value_states1 + value_states2 + value_states3
+            #key_states = key_states1
+            #value_states = value_states1
+            key_states = key_states1 + key_states2 + key_states3
+            value_states = value_states1 + value_states2 + value_states3
             
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
         #print(3, attn_weights.shape)
@@ -517,7 +520,7 @@ class LlamaAttention(nn.Module):
         H2O = True
         if H2O:
             ### Heavy + Recent
-            heavy_budget_ratio = 0.3
+            heavy_budget_ratio = 0.5
             recent_budget_ratio = 0.1
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
