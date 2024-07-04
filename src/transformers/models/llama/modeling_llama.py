@@ -442,8 +442,8 @@ class LlamaAttention(nn.Module):
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS1)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             value_states1 = matmul_hadUt(value_states_refresh)
-            print(torch.mean(value_states1-value_states))
-            print(torch.mean(key_states1-key_states))
+            #print(torch.mean(value_states1-value_states))
+            #print(torch.mean(key_states1-key_states))
 
             key_states2=key_states.detach().clone()
             value_states2=value_states.detach().clone()
@@ -487,6 +487,8 @@ class LlamaAttention(nn.Module):
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             value_states3 = matmul_hadUt(value_states_refresh)
 
+            key_states = key_states1
+            value_states = value_states1
             #key_states = key_states1 + key_states2 + key_states3
             #value_states = value_states1 + value_states2 + value_states3
             
