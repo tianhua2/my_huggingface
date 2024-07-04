@@ -410,7 +410,7 @@ class LlamaAttention(nn.Module):
             attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
             
         if DYNQ:
-            KV_BITS1=16
+            KV_BITS1=8
             KV_BITS2=4
             KV_BITS3=2
             key_states1=key_states.detach().clone()
