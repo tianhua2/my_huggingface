@@ -436,10 +436,12 @@ class LlamaAttention(nn.Module):
             #print(key_states1.shape)
             
             #Quantize masked key
-            #key_states_refresh = matmul_hadU(key_states1)
+            key_states_refresh = matmul_hadU(key_states1)
+            print('hadamard ket_states')
+            print(key_states_refresh)
             #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS1)
             #key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
-            #key_states1 = matmul_hadUt(key_states_refresh)
+            key_states1 = matmul_hadUt(key_states_refresh)
             #key_states1[~mask_bottom1]=0
             print('original key_state')
             print(key_states)
@@ -449,10 +451,10 @@ class LlamaAttention(nn.Module):
             print(key_states1.shape)
 
             #Quantize masked value
-            #value_states_refresh = matmul_hadU(value_states1)
+            value_states_refresh = matmul_hadU(value_states1)
             #value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS1)
             #value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
-            #value_states1 = matmul_hadUt(value_states_refresh)
+            value_states1 = matmul_hadUt(value_states_refresh)
             
             # Below is not used
             key_states2=key_states.detach().clone()
