@@ -418,7 +418,7 @@ class LlamaAttention(nn.Module):
             tmp_sum1 = torch.sum(tmp_attn1, dim=-2) 
             _, tmp_topk1 = tmp_sum1.topk(k=heavy_budget1, dim=-1)
             zeros1 = torch.zeros_like(tmp_sum1, dtype=torch.bool)
-            mask_bottom1 = zeros.scatter(-1, tmp_topk1, True).unsqueeze(2).transpose(-2,-1)
+            mask_bottom1 = zeros1.scatter(-1, tmp_topk1, True).unsqueeze(2).transpose(-2,-1)
             mask_bottom1 = mask_bottom1.expand(mask_bottom1.shape[0], mask_bottom1.shape[1], attn_weights_temp.shape[-2], key_states.shape[-1])
             key_states1[~mask_bottom1]=0
             value_states1[~mask_bottom1]=0
@@ -443,7 +443,7 @@ class LlamaAttention(nn.Module):
             tmp_sum2 = torch.sum(tmp_attn2, dim=-2) 
             _, tmp_topk2 = tmp_sum1.topk(k=heavy_budget2, dim=-1)
             zeros2 = torch.zeros_like(tmp_sum2, dtype=torch.bool)
-            mask_bottom2 = zeros.scatter(-1, tmp_topk2, True).unsqueeze(2).transpose(-2,-1)
+            mask_bottom2 = zeros2.scatter(-1, tmp_topk2, True).unsqueeze(2).transpose(-2,-1)
             mask_bottom2 = mask_bottom1.expand(mask_bottom2.shape[0], mask_bottom1.shape[1], attn_weights_temp.shape[-2], key_states.shape[-1])
             mask_bottom2 = torch.logical_xor(mask_bottom2, mask_bottom1)
             key_states2[~mask_bottom2]=0
