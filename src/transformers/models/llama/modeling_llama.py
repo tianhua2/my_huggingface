@@ -458,6 +458,8 @@ class LlamaAttention(nn.Module):
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS1)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             value_states1 = matmul_hadUt(value_states_refresh)
+            key_states1[~mask_bottom1]=0
+            value_states1[~mask_bottom1]=0
             
             # Below is not used
             key_states2=key_states.detach().clone()
@@ -484,7 +486,9 @@ class LlamaAttention(nn.Module):
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS2)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             value_states2 = matmul_hadUt(value_states_refresh)
-
+            key_states2[~mask_bottom2]=0
+            value_states2[~mask_bottom2]=0
+            
             key_states3=key_states.detach().clone()
             value_states3=value_states.detach().clone()
             mask_bottom3 = torch.logical_or(mask_bottom2, mask_bottom1)
@@ -501,7 +505,8 @@ class LlamaAttention(nn.Module):
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS3)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             value_states3 = matmul_hadUt(value_states_refresh)
-            #Above is not used
+            key_states3[mask_bottom3] = 0
+            value_states3[mask_bottom3] = 0
             
             #key_states = key_states1
             #value_states = value_states1
