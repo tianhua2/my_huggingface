@@ -400,6 +400,15 @@ class LlamaAttention(nn.Module):
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
         #Dynamic Quantization
+        # MatMul original key query to get attention weights
+        attn_weights_temp = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+        # Attention Mask
+        if attention_mask is not None:  # no matter the length, we just slice it
+            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+            #print(5, causal_mask.shape)
+            attn_weights_temp = attn_weights_temp + causal_mask
+            attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
+        
         DYNQ=False
             
         if DYNQ:
@@ -408,15 +417,6 @@ class LlamaAttention(nn.Module):
             KV_BITS3=2
             heavy_budget_ratio1 = 0.1
             heavy_budget_ratio2 = 0.2
-            
-            # MatMul original key query to get attention weights
-            attn_weights_temp = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
-            # Attention Mask
-            if attention_mask is not None:  # no matter the length, we just slice it
-                causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
-                #print(5, causal_mask.shape)
-                attn_weights_temp = attn_weights_temp + causal_mask
-                attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
             
             key_states1=key_states.detach().clone()
             value_states1=value_states.detach().clone()    
