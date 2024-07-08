@@ -380,9 +380,10 @@ class LlamaAttention(nn.Module):
         #    old_token_begin = -256
         #    old_token_end = -128
         old_token_end = -1
-        old_token_begin = int(kv_seq_len * 0.2)
-        REFRESH = False
-        KV_BITS=2
+        #old_token_begin = int(kv_seq_len * 0.2)
+        old_token_begin = 0
+        REFRESH = True
+        KV_BITS=4
         #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
         if REFRESH:
             key_states_refresh = matmul_hadU(key_states[:,:,old_token_begin:old_token_end,:])
@@ -399,15 +400,7 @@ class LlamaAttention(nn.Module):
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
         #Dynamic Quantization
-        DYNQ=True
-        # MatMul original key query to get attention weights
-        attn_weights_temp = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
-        # Attention Mask
-        if attention_mask is not None:  # no matter the length, we just slice it
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
-            #print(5, causal_mask.shape)
-            attn_weights_temp = attn_weights_temp + causal_mask
-            attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
+        DYNQ=False
             
         if DYNQ:
             KV_BITS1=8
@@ -415,6 +408,15 @@ class LlamaAttention(nn.Module):
             KV_BITS3=2
             heavy_budget_ratio1 = 0.1
             heavy_budget_ratio2 = 0.2
+            
+            # MatMul original key query to get attention weights
+            attn_weights_temp = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+            # Attention Mask
+            if attention_mask is not None:  # no matter the length, we just slice it
+                causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+                #print(5, causal_mask.shape)
+                attn_weights_temp = attn_weights_temp + causal_mask
+                attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
             
             key_states1=key_states.detach().clone()
             value_states1=value_states.detach().clone()    
@@ -522,11 +524,14 @@ class LlamaAttention(nn.Module):
             attn_weights = attn_weights + causal_mask
             attn_weights = torch.max(attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min))
 
-        H2O = True
+        if attn_weights.shape[-1] > 512:
+            H2O = True
+        else:
+            H2O = False
         if H2O:
             ### Heavy + Recent
-            heavy_budget_ratio = 0.4
-            recent_budget_ratio = 0.1
+            heavy_budget_ratio = 0.1
+            recent_budget_ratio = 0.05
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
             if heavy_budget > 384:
