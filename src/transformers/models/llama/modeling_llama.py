@@ -383,7 +383,7 @@ class LlamaAttention(nn.Module):
         #old_token_begin = int(kv_seq_len * 0.2)
         old_token_begin = 0
         REFRESH = True
-        KV_BITS=4
+        KV_BITS=2
         #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
         if REFRESH:
             key_states_refresh = matmul_hadU(key_states[:,:,old_token_begin:old_token_end,:])
