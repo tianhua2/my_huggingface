@@ -382,7 +382,7 @@ class LlamaAttention(nn.Module):
         old_token_end = -1
         old_token_begin = int(kv_seq_len * 0.2)
         #old_token_begin = 32
-        REFRESH = True
+        REFRESH = False
         KV_BITS=2
         #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
         if REFRESH:
@@ -530,7 +530,7 @@ class LlamaAttention(nn.Module):
             H2O = True
         else:
             H2O = False
-        H2O = False
+        H2O = True
         if H2O:
             ### Heavy + Recent
             heavy_budget_ratio = 0.1
