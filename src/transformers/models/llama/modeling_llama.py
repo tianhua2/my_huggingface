@@ -379,19 +379,19 @@ class LlamaAttention(nn.Module):
         #if (old_token_end - old_token_begin)>128:
         #    old_token_begin = -256
         #    old_token_end = -128
-        old_token_end = int(kv_seq_len * 0.9)
-        old_token_begin = int(kv_seq_len * 0.1)
+        old_token_end = -1
+        old_token_begin = int(kv_seq_len * 0.2)
         #old_token_begin = 0
         REFRESH = True
         KV_BITS=2
         #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
         if REFRESH:
             key_states_refresh = matmul_hadU(key_states[:,:,old_token_begin:old_token_end,:])
-            #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS)
-            key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS)
+            key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS)
+            #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
-            #key_states[:,:,old_token_begin:old_token_end,:] = matmul_hadUt(torch.transpose(key_states_refresh,-2,-1))
-            key_states[:,:,old_token_begin:old_token_end,:] = matmul_hadUt(key_states_refresh)
+            key_states[:,:,old_token_begin:old_token_end,:] = matmul_hadUt(torch.transpose(key_states_refresh,-2,-1))
+            #key_states[:,:,old_token_begin:old_token_end,:] = matmul_hadUt(key_states_refresh)
 
             value_states_refresh = matmul_hadU(value_states[:,:,old_token_begin:old_token_end,:])
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS)
