@@ -379,8 +379,8 @@ class LlamaAttention(nn.Module):
         #if (old_token_end - old_token_begin)>128:
         #    old_token_begin = -256
         #    old_token_end = -128
-        old_token_end = -1
-        old_token_begin = int(kv_seq_len * 0.3)
+        old_token_end = int(kv_seq_len * 0.9)
+        old_token_begin = int(kv_seq_len * 0.1)
         #old_token_begin = 0
         REFRESH = True
         KV_BITS=2
