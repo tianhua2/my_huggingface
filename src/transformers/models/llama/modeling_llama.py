@@ -383,7 +383,7 @@ class LlamaAttention(nn.Module):
         #old_token_begin = int(kv_seq_len * 0.2)
         old_token_begin = 0
         REFRESH = True
-        KV_BITS=4
+        KV_BITS=2
         #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
         if REFRESH:
             key_states_refresh = matmul_hadU(key_states[:,:,old_token_begin:old_token_end,:])
@@ -533,8 +533,8 @@ class LlamaAttention(nn.Module):
         H2O = True
         if H2O:
             ### Heavy + Recent
-            heavy_budget_ratio = 0.2
-            recent_budget_ratio = 0.04
+            heavy_budget_ratio = 0.4
+            recent_budget_ratio = 0.08
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
             if heavy_budget > 384:
