@@ -418,9 +418,9 @@ class LlamaAttention(nn.Module):
             KV_BITS2=3
             KV_BITS3=2
             KV_BITS4 = 4
-            heavy_budget_ratio1 = 0.2
-            heavy_budget_ratio2 = 0.5
-            heavy_budget_ratio3 = 0.8
+            heavy_budget_ratio1 = 0.1
+            heavy_budget_ratio2 = 0.2
+            heavy_budget_ratio3 = 0.3
             
             key_states1=key_states.detach().clone()
             value_states1=value_states.detach().clone()    
