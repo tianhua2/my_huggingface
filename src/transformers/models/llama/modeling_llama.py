@@ -559,7 +559,7 @@ class LlamaAttention(nn.Module):
             H2O = True
         else:
             H2O = False
-        H2O = False
+        H2O = True
         if H2O:
             ### Heavy + Recent
             heavy_budget_ratio = 0.25
