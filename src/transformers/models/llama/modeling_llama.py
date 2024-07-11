@@ -382,7 +382,7 @@ class LlamaAttention(nn.Module):
         old_token_end = -1
         #old_token_begin = int(kv_seq_len * 0.2)
         old_token_begin = 0
-        REFRESH = True
+        REFRESH = False
         KV_BITS=4
         #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
         if REFRESH:
@@ -411,16 +411,16 @@ class LlamaAttention(nn.Module):
             attn_weights_temp = attn_weights_temp + causal_mask
             attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
         
-        DYNQ=False
+        DYNQ=True
             
         if DYNQ:
             KV_BITS1=4
             KV_BITS2=3
             KV_BITS3=2
             KV_BITS4 = 4
-            heavy_budget_ratio1 = 0.1
-            heavy_budget_ratio2 = 0.2
-            heavy_budget_ratio3 = 0.3
+            heavy_budget_ratio1 = 0.05
+            heavy_budget_ratio2 = 0.11
+            heavy_budget_ratio3 = 0.16
             
             key_states1=key_states.detach().clone()
             value_states1=value_states.detach().clone()    
@@ -562,8 +562,8 @@ class LlamaAttention(nn.Module):
         H2O = True
         if H2O:
             ### Heavy + Recent
-            heavy_budget_ratio = 0.1
-            recent_budget_ratio = 0.02
+            heavy_budget_ratio = 0.12
+            recent_budget_ratio = 0.04
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
             if heavy_budget > 384:
