@@ -411,14 +411,16 @@ class LlamaAttention(nn.Module):
             attn_weights_temp = attn_weights_temp + causal_mask
             attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
         
-        DYNQ=False
+        DYNQ=True
             
         if DYNQ:
             KV_BITS1=4
             KV_BITS2=3
             KV_BITS3=2
-            heavy_budget_ratio1 = 0.1
-            heavy_budget_ratio2 = 0.2
+            KV_BITS4 = 4
+            heavy_budget_ratio1 = 0.2
+            heavy_budget_ratio2 = 0.5
+            heavy_budget_ratio3 = 0.8
             
             key_states1=key_states.detach().clone()
             value_states1=value_states.detach().clone()    
@@ -465,7 +467,6 @@ class LlamaAttention(nn.Module):
             key_states1[~mask_bottom1]=0
             value_states1[~mask_bottom1]=0
             
-            # Below is not used
             key_states2=key_states.detach().clone()
             value_states2=value_states.detach().clone()
 
@@ -492,30 +493,58 @@ class LlamaAttention(nn.Module):
             value_states2 = matmul_hadUt(value_states_refresh)
             key_states2[~mask_bottom2]=0
             value_states2[~mask_bottom2]=0
-            
+
             key_states3=key_states.detach().clone()
             value_states3=value_states.detach().clone()
-            mask_bottom3 = torch.logical_or(mask_bottom2, mask_bottom1)
-            key_states3[mask_bottom3] = 0
-            value_states3[mask_bottom3] = 0
+
+            heavy_budget3 = int(heavy_budget_ratio3 * attn_weights_temp.shape[-1])
+            tmp_attn3 = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights_temp.dtype)
+            tmp_sum3 = torch.sum(tmp_attn3, dim=-2) 
+            _, tmp_topk3 = tmp_sum1.topk(k=heavy_budget3, dim=-1)
+            zeros3 = torch.zeros_like(tmp_sum3, dtype=torch.bool)
+            mask_bottom3 = zeros3.scatter(-1, tmp_topk3, True).unsqueeze(2).transpose(-2,-1)
+            mask_bottom3 = mask_bottom3.expand(mask_bottom3.shape[0], mask_bottom3.shape[1], attn_weights_temp.shape[-2], key_states.shape[-1])
+            mask_bottom3 = torch.logical_xor(mask_bottom3, torch.logical_or(mask_bottom2, mask_bottom1))
+            key_states3[~mask_bottom3]=0
+            value_states3[~mask_bottom3]=0
             key_states_refresh = matmul_hadU(key_states3)
             #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS3)
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS3)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
-            #key_states3 = matmul_hadUt(torch.transpose(key_states_refresh,-2,-1))
+            #key_states2 = matmul_hadUt(torch.transpose(key_states_refresh,-2,-1))
             key_states3 = matmul_hadUt(key_states_refresh)
-            #key_states3[mask_bottom3] = 0
+            #key_states2[~mask_bottom2]=0
             value_states_refresh = matmul_hadU(value_states3)
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS3)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             value_states3 = matmul_hadUt(value_states_refresh)
-            key_states3[mask_bottom3] = 0
-            value_states3[mask_bottom3] = 0
+            key_states3[~mask_bottom3]=0
+            value_states3[~mask_bottom3]=0
+
+            
+            key_states4=key_states.detach().clone()
+            value_states4=value_states.detach().clone()
+            mask_bottom4 = torch.logical_or(mask_bottom3, torch.logical_or(mask_bottom2, mask_bottom1))
+            key_states4[mask_bottom4] = 0
+            value_states4[mask_bottom4] = 0
+            key_states_refresh = matmul_hadU(key_states4)
+            #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS3)
+            key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS4)
+            key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
+            #key_states3 = matmul_hadUt(torch.transpose(key_states_refresh,-2,-1))
+            key_states4 = matmul_hadUt(key_states_refresh)
+            #key_states4[mask_bottom3] = 0
+            value_states_refresh = matmul_hadU(value_states4)
+            value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS4)
+            value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
+            value_states4 = matmul_hadUt(value_states_refresh)
+            key_states4[mask_bottom3] = 0
+            value_states4[mask_bottom3] = 0
             
             #key_states = key_states1
             #value_states = value_states1
-            key_states = key_states1 + key_states2 + key_states3
-            value_states = value_states1 + value_states2 + value_states3
+            key_states = key_states1 + key_states2 + key_states3 + key_states4
+            value_states = value_states1 + value_states2 + value_states3 + value_states4
             
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
         #print(3, attn_weights.shape)
@@ -530,7 +559,7 @@ class LlamaAttention(nn.Module):
             H2O = True
         else:
             H2O = False
-        H2O = True
+        H2O = False
         if H2O:
             ### Heavy + Recent
             heavy_budget_ratio = 0.25
