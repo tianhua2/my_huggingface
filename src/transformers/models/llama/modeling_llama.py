@@ -367,6 +367,7 @@ class LlamaAttention(nn.Module):
         #print(1, query_states.shape, key_states.shape)
         
         if past_key_value is not None:
+            print('use cache')
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
@@ -412,7 +413,7 @@ class LlamaAttention(nn.Module):
             attn_weights_temp = attn_weights_temp + causal_mask
             attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
         
-        DYNQ=False
+        DYNQ=True
             
         if DYNQ:
             KV_BITS1=4
@@ -562,11 +563,11 @@ class LlamaAttention(nn.Module):
             H2O = True
         else:
             H2O = False
-        H2O = False
+        H2O = True
         if H2O:
             ### Heavy + Recent
-            heavy_budget_ratio = 0.12
-            recent_budget_ratio = 0.04
+            heavy_budget_ratio = 0.10
+            recent_budget_ratio = 0.02
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
             if heavy_budget > 384:
