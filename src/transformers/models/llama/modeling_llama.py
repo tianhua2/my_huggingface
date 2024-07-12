@@ -600,10 +600,12 @@ class LlamaAttention(nn.Module):
         v_seq_dim = 2
         cache_size = hh_size + recent_size
         if past_key_value is not None:
+            print('use cache')
             past_key_values = list(past_key_value)
             past_key_value = list(past_key_value)
             seq_len = past_key_values[0].size(self.k_seq_dim)
             if seq_len > cache_size:
+                print('kv drop')
                 bsz, num_heads, _, head_dim = past_key_values[0].shape
                 num_new_tokens = attn_weights.shape[2]
                 if self.hh_score is None:
