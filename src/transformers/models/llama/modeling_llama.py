@@ -545,10 +545,10 @@ class LlamaAttention(nn.Module):
             
             #key_states = key_states1
             #value_states = value_states1
-            #key_states = key_states1 + key_states2 + key_states3 + key_states4
-            #value_states = value_states1 + value_states2 + value_states3 + value_states4
-            key_states = key_states1 + key_states2 + key_states3
-            value_states = value_states1 + value_states2 + value_states3
+            key_states = key_states1 + key_states2 + key_states3 + key_states4
+            value_states = value_states1 + value_states2 + value_states3 + value_states4
+            #key_states = key_states1 + key_states2 + key_states3
+            #value_states = value_states1 + value_states2 + value_states3
             
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
         #print(3, attn_weights.shape)
