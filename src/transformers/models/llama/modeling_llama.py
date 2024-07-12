@@ -599,32 +599,33 @@ class LlamaAttention(nn.Module):
         k_seq_dim = 2
         v_seq_dim = 2
         cache_size = hh_size + recent_size
-        past_key_values = list(past_key_value)
-        past_key_value = list(past_key_value)
-        seq_len = past_key_values[0].size(self.k_seq_dim)
-        if seq_len > cache_size:
-            bsz, num_heads, _, head_dim = past_key_values[0].shape
-            num_new_tokens = attn_weights.shape[2]
-            if self.hh_score is None:
-                self.hh_score = attn_weights.sum(0).sum(1)
-            else:
-                attn_score_cache = attn_weights.sum(0).sum(1)
-                attn_score_cache[:, :-num_new_tokens] += self.hh_score
-                self.hh_score = attn_score_cache
+        if past_key_value is not None:
+            past_key_values = list(past_key_value)
+            past_key_value = list(past_key_value)
+            seq_len = past_key_values[0].size(self.k_seq_dim)
+            if seq_len > cache_size:
+                bsz, num_heads, _, head_dim = past_key_values[0].shape
+                num_new_tokens = attn_weights.shape[2]
+                if self.hh_score is None:
+                    self.hh_score = attn_weights.sum(0).sum(1)
+                else:
+                    attn_score_cache = attn_weights.sum(0).sum(1)
+                    attn_score_cache[:, :-num_new_tokens] += self.hh_score
+                    self.hh_score = attn_score_cache
             
-            select_hh_scores = self.hh_score[:, :seq_len - recent_size]
-            _, keep_topk = torch.topk(select_hh_scores, hh_size, dim=-1)
-            keep_topk = keep_topk.sort().values
-            keep_recent = torch.arange(seq_len - recent_size, seq_len, device=keep_topk.device).repeat(keep_topk.shape[0], 1)
-            keep_idx = torch.cat([keep_topk, keep_recent], dim=-1)
-            mask = torch.zeros(self.hh_score.shape, dtype=torch.bool).to(past_key_values[0].device)
-            mask = mask.scatter(-1, keep_idx, 1)
-            k_hh_recent = past_key_values[0].squeeze()[mask].view(bsz, num_heads, -1, head_dim)
-            v_hh_recent = past_key_values[1].squeeze()[mask].view(bsz, num_heads, -1, head_dim)
-            self.hh_score= self.hh_score[mask].view(num_heads, self.cache_size)
-            past_key_values[0] = k_hh_recent
-            past_key_values[1] = v_hh_recent
-            past_key_value = tuple(past_key_values)
+                select_hh_scores = self.hh_score[:, :seq_len - recent_size]
+                _, keep_topk = torch.topk(select_hh_scores, hh_size, dim=-1)
+                keep_topk = keep_topk.sort().values
+                keep_recent = torch.arange(seq_len - recent_size, seq_len, device=keep_topk.device).repeat(keep_topk.shape[0], 1)
+                keep_idx = torch.cat([keep_topk, keep_recent], dim=-1)
+                mask = torch.zeros(self.hh_score.shape, dtype=torch.bool).to(past_key_values[0].device)
+                mask = mask.scatter(-1, keep_idx, 1)
+                k_hh_recent = past_key_values[0].squeeze()[mask].view(bsz, num_heads, -1, head_dim)
+                v_hh_recent = past_key_values[1].squeeze()[mask].view(bsz, num_heads, -1, head_dim)
+                self.hh_score= self.hh_score[mask].view(num_heads, self.cache_size)
+                past_key_values[0] = k_hh_recent
+                past_key_values[1] = v_hh_recent
+                past_key_value = tuple(past_key_values)
         
         attn_output = torch.matmul(attn_weights, value_states)
 
