@@ -416,13 +416,13 @@ class LlamaAttention(nn.Module):
         DYNQ=True
             
         if DYNQ:
-            KV_BITS1=3
+            KV_BITS1=4
             KV_BITS2=3
-            KV_BITS3=3
+            KV_BITS3=2
             KV_BITS4 = 4
-            heavy_budget_ratio1 = 0.05
-            heavy_budget_ratio2 = 0.11
-            heavy_budget_ratio3 = 0.16
+            heavy_budget_ratio1 = 0.06
+            heavy_budget_ratio2 = 0.12
+            heavy_budget_ratio3 = 0.15
             
             key_states1=key_states.detach().clone()
             value_states1=value_states.detach().clone()    
@@ -566,8 +566,8 @@ class LlamaAttention(nn.Module):
         H2O = True
         if H2O:
             ### Heavy + Recent
-            heavy_budget_ratio = 0.12
-            recent_budget_ratio = 0.04
+            heavy_budget_ratio = 0.125
+            recent_budget_ratio = 0.025
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
             if heavy_budget > 384:
