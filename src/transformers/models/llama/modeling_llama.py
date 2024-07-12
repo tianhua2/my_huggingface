@@ -595,12 +595,13 @@ class LlamaAttention(nn.Module):
         attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
 
         # real KV drop
+        real_drop = False
         hh_size = 128
         recent_size = 128
         k_seq_dim = 2
         v_seq_dim = 2
         cache_size = hh_size + recent_size
-        if past_key_value is not None:
+        if real_drop and (past_key_value is not None):
             print('use cache')
             past_key_values = list(past_key_value)
             past_key_value = list(past_key_value)
