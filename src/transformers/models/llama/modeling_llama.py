@@ -599,7 +599,8 @@ class LlamaAttention(nn.Module):
         k_seq_dim = 2
         v_seq_dim = 2
         cache_size = hh_size + recent_size
-        past_key_values = list(past_key_values)
+        past_key_values = list(past_key_value)
+        past_key_value = list(past_key_value)
         seq_len = past_key_values[0].size(self.k_seq_dim)
         if seq_len > cache_size:
             bsz, num_heads, _, head_dim = past_key_values[0].shape
@@ -623,7 +624,7 @@ class LlamaAttention(nn.Module):
             self.hh_score= self.hh_score[mask].view(num_heads, self.cache_size)
             past_key_values[0] = k_hh_recent
             past_key_values[1] = v_hh_recent
-            past_key_values = tuple(past_key_values)
+            past_key_value = tuple(past_key_values)
         
         attn_output = torch.matmul(attn_weights, value_states)
 
