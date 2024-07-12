@@ -416,9 +416,9 @@ class LlamaAttention(nn.Module):
         DYNQ=True
             
         if DYNQ:
-            KV_BITS1=4
+            KV_BITS1=3
             KV_BITS2=3
-            KV_BITS3=2
+            KV_BITS3=3
             KV_BITS4 = 4
             heavy_budget_ratio1 = 0.05
             heavy_budget_ratio2 = 0.11
