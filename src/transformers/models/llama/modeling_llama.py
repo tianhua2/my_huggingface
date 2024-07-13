@@ -413,7 +413,7 @@ class LlamaAttention(nn.Module):
             attn_weights_temp = attn_weights_temp + causal_mask
             attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
         
-        DYNQ=True
+        DYNQ=False
             
         if DYNQ:
             KV_BITS1=4
@@ -563,7 +563,7 @@ class LlamaAttention(nn.Module):
             H2O = True
         else:
             H2O = False
-        H2O = True
+        H2O = False
         if H2O:
             ### Heavy + Recent
             heavy_budget_ratio = 0.11
@@ -589,6 +589,15 @@ class LlamaAttention(nn.Module):
             mask_bottom = torch.logical_or(mask_bottom, ones)
             # mask_bottom = ones
             attn_weights[~mask_bottom] = torch.finfo(attn_weights.dtype).min
+
+        #Quantize Softmax input
+        quant_attn = False
+        attn_bit = 8
+        if quant_attn:
+            attn_weights_quant = matmul_hadU(attn_weights)
+            attn_weights_quant, scale_attn_weights_list, zero_attn_weights_list = asym_quantize_and_pack_i4(attn_weights_quant, bits=attn_bit)
+            attn_weights_quant = unpack_i4_and_asym_dequantize(attn_weights_quant, scale_attn_weights_list, zero_attn_weights_list)
+            attn_weights = matmul_hadUt(attn_weights_quant)
         
         # upcast attention to fp32
         attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
