@@ -595,6 +595,7 @@ class LlamaAttention(nn.Module):
         attn_bit = 8
         if quant_attn:
             attn_weights_quant = matmul_hadU(attn_weights)
+            print('hadamard attn ', attn_weights_quant)
             attn_weights_quant, scale_attn_weights_list, zero_attn_weights_list = asym_quantize_and_pack_i4(attn_weights_quant, bits=attn_bit)
             print('quant attn ', attn_weights_quant)
             attn_weights_quant = unpack_i4_and_asym_dequantize(attn_weights_quant, scale_attn_weights_list, zero_attn_weights_list)
