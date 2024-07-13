@@ -373,32 +373,7 @@ class LlamaAttention(nn.Module):
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
         #print(2, query_states.shape, key_states.shape)
 
-        #print("heavy_budget: " + str(heavy_budget))
-        #print(key_states.shape, value_states.shape)
-        kv_seq_len = key_states.shape[-2]
-        #old_token_end = int(kv_seq_len * 0.9)
-        #old_token_begin = int(kv_seq_len * 0.8)
-        #if (old_token_end - old_token_begin)>128:
-        #    old_token_begin = -256
-        #    old_token_end = -128
-        old_token_end = -1
-        #old_token_begin = int(kv_seq_len * 0.2)
-        old_token_begin = 0
-        REFRESH = False
-        KV_BITS=4
-        #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
-        if REFRESH:
-            key_states_refresh = matmul_hadU(key_states[:,:,old_token_begin:old_token_end,:])
-            #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS)
-            key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS)
-            key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
-            #key_states[:,:,old_token_begin:old_token_end,:] = matmul_hadUt(torch.transpose(key_states_refresh,-2,-1))
-            key_states[:,:,old_token_begin:old_token_end,:] = matmul_hadUt(key_states_refresh)
 
-            value_states_refresh = matmul_hadU(value_states[:,:,old_token_begin:old_token_end,:])
-            value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS)
-            value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
-            value_states[:,:,old_token_begin:old_token_end,:] = matmul_hadUt(value_states_refresh)
             
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
@@ -549,6 +524,33 @@ class LlamaAttention(nn.Module):
             value_states = value_states1 + value_states2 + value_states3 + value_states4
             #key_states = key_states1 + key_states2 + key_states3
             #value_states = value_states1 + value_states2 + value_states3
+
+        #print("heavy_budget: " + str(heavy_budget))
+        #print(key_states.shape, value_states.shape)
+        kv_seq_len = key_states.shape[-2]
+        old_token_end = int(kv_seq_len * 0.95)
+        old_token_begin = int(kv_seq_len * 0.90)
+        if (old_token_end - old_token_begin)>128 and kv_seq_len > 256:
+            old_token_begin = -256
+            old_token_end = -128
+        #old_token_end = -1
+        #old_token_begin = int(kv_seq_len * 0.2)
+        #old_token_begin = 0
+        REFRESH = True
+        KV_BITS=3
+        #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
+        if REFRESH:
+            key_states_refresh = matmul_hadU(key_states[:,:,old_token_begin:old_token_end,:])
+            #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS)
+            key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS)
+            key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
+            #key_states[:,:,old_token_begin:old_token_end,:] = matmul_hadUt(torch.transpose(key_states_refresh,-2,-1))
+            key_states[:,:,old_token_begin:old_token_end,:] = matmul_hadUt(key_states_refresh)
+
+            value_states_refresh = matmul_hadU(value_states[:,:,old_token_begin:old_token_end,:])
+            value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS)
+            value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
+            value_states[:,:,old_token_begin:old_token_end,:] = matmul_hadUt(value_states_refresh)
             
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
         #print(3, attn_weights.shape)
@@ -566,14 +568,14 @@ class LlamaAttention(nn.Module):
         H2O = False
         if H2O:
             ### Heavy + Recent
-            heavy_budget_ratio = 0.11
-            recent_budget_ratio = 0.03
+            heavy_budget_ratio = 0.03
+            recent_budget_ratio = 0.11
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
-            if heavy_budget > 384:
-                heavy_budget = 384
-            if recent_budget > 128:
-                recent_budget = 128
+            if heavy_budget > 128:
+                heavy_budget = 128
+            if recent_budget > 384:
+                recent_budget = 384
             # Heavy Hitter Mask (Based on global statistics)
             tmp_attn = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights.dtype)
             tmp_sum = torch.sum(tmp_attn, dim=-2) 
@@ -591,7 +593,7 @@ class LlamaAttention(nn.Module):
             attn_weights[~mask_bottom] = torch.finfo(attn_weights.dtype).min
 
         #Quantize Softmax input
-        quant_attn = True
+        quant_attn = False
         attn_bit = 8
         if quant_attn:
             #attn_weights_quant = matmul_hadU(attn_weights)
