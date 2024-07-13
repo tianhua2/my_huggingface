@@ -388,7 +388,7 @@ class LlamaAttention(nn.Module):
             attn_weights_temp = attn_weights_temp + causal_mask
             attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
         
-        DYNQ=False
+        DYNQ=True
             
         if DYNQ:
             KV_BITS1=4
@@ -565,7 +565,7 @@ class LlamaAttention(nn.Module):
             H2O = True
         else:
             H2O = False
-        H2O = False
+        H2O = True
         if H2O:
             ### Heavy + Recent
             heavy_budget_ratio = 0.11
