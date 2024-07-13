@@ -591,8 +591,8 @@ class LlamaAttention(nn.Module):
             attn_weights[~mask_bottom] = torch.finfo(attn_weights.dtype).min
 
         #Quantize Softmax input
-        quant_attn = False
-        attn_bit = 8
+        quant_attn = True
+        attn_bit = 4
         if quant_attn:
             attn_weights_quant = matmul_hadU(attn_weights)
             attn_weights_quant, scale_attn_weights_list, zero_attn_weights_list = asym_quantize_and_pack_i4(attn_weights_quant, bits=attn_bit)
