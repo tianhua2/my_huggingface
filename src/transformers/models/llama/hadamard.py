@@ -91,10 +91,14 @@ def random_hadamard_matrix(size, device):
     return matmul_hadU(Q).to(device)
 
 def kron_mat_calc(size, dtype=torch.float16):
+    #x = torch.tensor([[1, 1],[1, -1]], dtype=dtype)
+    #x_inv = torch.tensor([[1, 1],[1, -1]], dtype=dtype)
+    #y = torch.tensor([[1, 0],[0, 1]], dtype=dtype)
+    #y_inv = torch.tensor([[1, 0],[0, 1]], dtype=dtype)
+    y = torch.tensor([[1, 1],[1, -1]], dtype=dtype)
+    y_inv = torch.tensor([[1, 1],[1, -1]], dtype=dtype)
     x = torch.tensor([[1, 1],[1, -1]], dtype=dtype)
     x_inv = torch.tensor([[1, 1],[1, -1]], dtype=dtype)
-    y = torch.tensor([[1, 0],[0, 1]], dtype=dtype)
-    y_inv = torch.tensor([[1, 0],[0, 1]], dtype=dtype)
     i = 2
     while i < size:
         y = torch.kron(x, y)
