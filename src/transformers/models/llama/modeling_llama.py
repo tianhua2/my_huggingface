@@ -389,7 +389,8 @@ class LlamaAttention(nn.Module):
             attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
         
         DYNQ=True
-            
+        HADAMARD = False
+        
         if DYNQ:
             KV_BITS1=4
             KV_BITS2=3
@@ -422,12 +423,18 @@ class LlamaAttention(nn.Module):
             #print(key_states1.shape)
             
             #Quantize masked key
-            key_states_refresh = matmul_hadU(key_states1)
+            if HADAMARD:
+                key_states_refresh = matmul_hadU(key_states1)
+            else:
+                key_states_refresh = key_states1
             #print('hadamard ket_states')
             #print(key_states_refresh)
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS1)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
-            key_states1 = matmul_hadUt(key_states_refresh)
+            if HADAMARD:
+                key_states1 = matmul_hadUt(key_states_refresh)
+            else:
+                key_states1 = key_states_refresh
             #key_states1[~mask_bottom1]=0
             #print('original key_state')
             #print(key_states)
@@ -437,10 +444,16 @@ class LlamaAttention(nn.Module):
             #print(key_states1.shape)
 
             #Quantize masked value
-            value_states_refresh = matmul_hadU(value_states1)
+            if HADAMARD:
+                value_states_refresh = matmul_hadU(value_states1)
+            else:
+                value_states_refresh = value_states1
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS1)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
-            value_states1 = matmul_hadUt(value_states_refresh)
+            if HADAMARD:
+                value_states1 = matmul_hadUt(value_states_refresh)
+            else:
+                value_states1 = value_states_refresh
             key_states1[~mask_bottom1]=0
             value_states1[~mask_bottom1]=0
             
@@ -457,17 +470,29 @@ class LlamaAttention(nn.Module):
             mask_bottom2 = torch.logical_xor(mask_bottom2, mask_bottom1)
             key_states2[~mask_bottom2]=0
             value_states2[~mask_bottom2]=0
-            key_states_refresh = matmul_hadU(key_states2)
+            if HADAMARD:
+                key_states_refresh = matmul_hadU(key_states2)
+            else:
+                key_states_refresh = key_states2
             #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS2)
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS2)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
             #key_states2 = matmul_hadUt(torch.transpose(key_states_refresh,-2,-1))
-            key_states2 = matmul_hadUt(key_states_refresh)
+            if HADAMARD:
+                key_states2 = matmul_hadUt(key_states_refresh)
+            else:
+                key_states2 = key_states_refresh
             #key_states2[~mask_bottom2]=0
-            value_states_refresh = matmul_hadU(value_states2)
+            if HADAMARD:
+                value_states_refresh = matmul_hadU(value_states2)
+            else:
+                value_states_refresh = value_states2
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS2)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
-            value_states2 = matmul_hadUt(value_states_refresh)
+            if HADAMARD:
+                value_states2 = matmul_hadUt(value_states_refresh)
+            else:
+                value_states2 = value_states_refresh
             key_states2[~mask_bottom2]=0
             value_states2[~mask_bottom2]=0
 
@@ -484,17 +509,29 @@ class LlamaAttention(nn.Module):
             mask_bottom3 = torch.logical_xor(mask_bottom3, torch.logical_or(mask_bottom2, mask_bottom1))
             key_states3[~mask_bottom3]=0
             value_states3[~mask_bottom3]=0
-            key_states_refresh = matmul_hadU(key_states3)
+            if HADAMARD:
+                key_states_refresh = matmul_hadU(key_states3)
+            else:
+                key_states_refresh = key_states3
             #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS3)
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS3)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
             #key_states2 = matmul_hadUt(torch.transpose(key_states_refresh,-2,-1))
-            key_states3 = matmul_hadUt(key_states_refresh)
+            if HADAMARD:
+                key_states3 = matmul_hadUt(key_states_refresh)
+            else:
+                key_states3 = key_states_refresh
             #key_states2[~mask_bottom2]=0
-            value_states_refresh = matmul_hadU(value_states3)
+            if HADAMARD:
+                value_states_refresh = matmul_hadU(value_states3)
+            else:
+                value_states_refresh = value_states3
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS3)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
-            value_states3 = matmul_hadUt(value_states_refresh)
+            if HADAMARD:
+                value_states3 = matmul_hadUt(value_states_refresh)
+            else:
+                value_states3 = value_states_refresh
             key_states3[~mask_bottom3]=0
             value_states3[~mask_bottom3]=0
 
@@ -504,17 +541,29 @@ class LlamaAttention(nn.Module):
             mask_bottom4 = torch.logical_or(mask_bottom3, torch.logical_or(mask_bottom2, mask_bottom1))
             key_states4[mask_bottom4] = 0
             value_states4[mask_bottom4] = 0
-            key_states_refresh = matmul_hadU(key_states4)
+            if HADAMARD:
+                key_states_refresh = matmul_hadU(key_states4)
+            else:
+                key_states_refresh = key_states4
             #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS3)
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS4)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
             #key_states3 = matmul_hadUt(torch.transpose(key_states_refresh,-2,-1))
-            key_states4 = matmul_hadUt(key_states_refresh)
+            if HADAMARD:
+                key_states4 = matmul_hadUt(key_states_refresh)
+            else:
+                key_states4 = key_states_refresh
             #key_states4[mask_bottom3] = 0
-            value_states_refresh = matmul_hadU(value_states4)
+            if HADAMARD:
+                value_states_refresh = matmul_hadU(value_states4)
+            else:
+                value_states_refresh = value_states4
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS4)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
-            value_states4 = matmul_hadUt(value_states_refresh)
+            if HADAMARD:
+                value_states4 = matmul_hadUt(value_states_refresh)
+            else:
+                value_states4 = value_states_refresh
             key_states4[mask_bottom3] = 0
             value_states4[mask_bottom3] = 0
             
