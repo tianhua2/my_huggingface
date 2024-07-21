@@ -90,6 +90,15 @@ def random_hadamard_matrix(size, device):
     Q = torch.diag(Q)
     return matmul_hadU(Q).to(device)
 
+def my_hadamard(X)
+    size = X.shape[-1]
+    Q = torch.randint(low=-1, high=2, size=(size,)).to(torch.float64)
+    Q = torch.diag(Q)
+    had = matmul_hadU(Q)
+    had_inv = torch.linalg.inv(had)
+    return X @ had, had_inv
+
+
 #def matmul_hadU_cuda(X, hadK, K):
 #    n = X.shape[-1]
 #    if K == 1:
