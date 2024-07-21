@@ -91,17 +91,28 @@ def random_hadamard_matrix(size, device):
     return matmul_hadU(Q).to(device)
 
 def kron_mat_calc(size, dtype=torch.float16):
-  x=torch.tensor([[-1, 1],[1, 0]], dtype=dtype)
-  x_inv = torch.tensor([[0, 1],[1, 1]], dtype=dtype)
-  y=x.clone()
-  y_inv=x_inv.clone()
-  size=128
-  i = 2
-  while i < size:
-    y = torch.kron(x, y)
-    y_inv = torch.kron(x_inv, y_inv)
-    i = i * 2
-  return y / torch.tensor(size).sqrt(), y_inv  * torch.tensor(size).sqrt()
+    x = torch.tensor([[1, 1],[1, -1]], dtype=dtype)
+    x_inv = torch.tensor([[1, 1],[1, -1]], dtype=dtype)
+    y = torch.tensor([[1, 0],[0, 1]], dtype=dtype)
+    y_inv = torch.tensor([[1, 0],[0, 1]], dtype=dtype)
+    i = 2
+    while i < size:
+        y = torch.kron(x, y)
+        y_inv = torch.kron(x_inv, y_inv)
+        i = i * 2
+    return y / torch.tensor(size).sqrt() * torch.tensor(2).sqrt(), y_inv / torch.tensor(size).sqrt() * torch.tensor(2).sqrt()
+
+  #x=torch.tensor([[-1, 1],[1, 0]], dtype=dtype)
+  #x_inv = torch.tensor([[0, 1],[1, 1]], dtype=dtype)
+  #y=x.clone()
+  #y_inv=x_inv.clone()
+  #size=128
+  #i = 2
+  #while i < size:
+  #  y = torch.kron(x, y)
+  #  y_inv = torch.kron(x_inv, y_inv)
+  #  i = i * 2
+  #return y / torch.tensor(size).sqrt(), y_inv  * torch.tensor(size).sqrt()
 
 
 #def matmul_hadU_cuda(X, hadK, K):
