@@ -395,7 +395,8 @@ class LlamaAttention(nn.Module):
         kron_size= key_states.shape[-1]
         kron_dtype = key_states.dtype
         kron_mat, kron_mat_inv = kron_mat_calc(kron_size, kron_dtype)
-        
+        kron_mat = kron_mat.to(key_states)
+        kron_mat_inv = kron_mat_inv.to(key_states)
         if DYNQ:
             KV_BITS1=4
             KV_BITS2=3
