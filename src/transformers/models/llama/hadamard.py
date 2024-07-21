@@ -90,13 +90,18 @@ def random_hadamard_matrix(size, device):
     Q = torch.diag(Q)
     return matmul_hadU(Q).to(device)
 
-def my_hadamard(X):
-    size = X.shape[-1]
-    Q = torch.randint(low=-1, high=2, size=(size,)).to(torch.float64)
-    Q = torch.diag(Q)
-    had = matmul_hadU(Q)
-    had_inv = torch.linalg.inv(had)
-    return X @ had, had_inv
+def kron_mat(size, dtype=torch.float16):
+  x=torch.tensor([[-1, 1],[1, 0]], dtype=dtype)
+  x_inv = torch.tensor([[0, 1],[1, 1]], dtype=dtype)
+  y=x.clone()
+  y_inv=x_inv.clone()
+  size=128
+  i = 2
+  while i < size:
+    y = torch.kron(x, y)
+    y_inv = torch.kron(x_inv, y_inv)
+    i = i * 2
+  return y, y_inv
 
 
 #def matmul_hadU_cuda(X, hadK, K):
