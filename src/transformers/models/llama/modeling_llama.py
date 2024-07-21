@@ -55,7 +55,7 @@ if is_flash_attn_2_available():
     from flash_attn import flash_attn_func, flash_attn_varlen_func
     from flash_attn.bert_padding import index_first_axis, pad_input, unpad_input  # noqa
 
-from .hadamard import matmul_hadU, matmul_hadUt, get_minq_maxq, asym_quantize_and_pack_i4, unpack_i4_and_asym_dequantize, kron_mat
+from .hadamard import matmul_hadU, matmul_hadUt, get_minq_maxq, asym_quantize_and_pack_i4, unpack_i4_and_asym_dequantize, kron_mat_calc
 
 logger = logging.get_logger(__name__)
 
@@ -394,7 +394,7 @@ class LlamaAttention(nn.Module):
         KRON = True
         kron_size= key_states.shape[-1]
         kron_dtype = key_states.dtype
-        kron_mat, kron_mat_inv = kron_mat(kron_size, kron_dtype)
+        kron_mat, kron_mat_inv = kron_mat_calc(kron_size, kron_dtype)
         
         if DYNQ:
             KV_BITS1=4
