@@ -101,7 +101,7 @@ def kron_mat_calc(size, dtype=torch.float16):
     y = torch.kron(x, y)
     y_inv = torch.kron(x_inv, y_inv)
     i = i * 2
-  return y / torch.tensor(n).sqrt(), y_inv  * torch.tensor(n).sqrt()
+  return y / torch.tensor(size).sqrt(), y_inv  * torch.tensor(size).sqrt()
 
 
 #def matmul_hadU_cuda(X, hadK, K):
