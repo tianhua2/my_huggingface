@@ -90,7 +90,7 @@ def random_hadamard_matrix(size, device):
     Q = torch.diag(Q)
     return matmul_hadU(Q).to(device)
 
-def my_hadamard(X)
+def my_hadamard(X):
     size = X.shape[-1]
     Q = torch.randint(low=-1, high=2, size=(size,)).to(torch.float64)
     Q = torch.diag(Q)
