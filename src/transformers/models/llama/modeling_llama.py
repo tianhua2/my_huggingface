@@ -55,7 +55,7 @@ if is_flash_attn_2_available():
     from flash_attn import flash_attn_func, flash_attn_varlen_func
     from flash_attn.bert_padding import index_first_axis, pad_input, unpad_input  # noqa
 
-from .hadamard import matmul_hadU, matmul_hadUt, get_minq_maxq, asym_quantize_and_pack_i4, unpack_i4_and_asym_dequantize
+from .hadamard import matmul_hadU, matmul_hadUt, get_minq_maxq, asym_quantize_and_pack_i4, unpack_i4_and_asym_dequantize, kron_mat
 
 logger = logging.get_logger(__name__)
 
@@ -391,6 +391,11 @@ class LlamaAttention(nn.Module):
         DYNQ=True
         HADAMARD = False
         
+        KRON = True
+        kron_size= key_states.shape[-1]
+        kron_dtype = key_states.dtype
+        kron_mat, kron_mat_inv = kron_mat(kron_size, kron_dtype)
+        
         if DYNQ:
             KV_BITS1=4
             KV_BITS2=3
@@ -426,7 +431,10 @@ class LlamaAttention(nn.Module):
             if HADAMARD:
                 key_states_refresh = matmul_hadU(key_states1)
             else:
-                key_states_refresh = key_states1
+                if KRON:
+                    key_states_refresh = key_states1 @ kron_mat
+                else:
+                    key_states_refresh = key_states1
             #print('hadamard ket_states')
             #print(key_states_refresh)
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS1)
@@ -434,7 +442,10 @@ class LlamaAttention(nn.Module):
             if HADAMARD:
                 key_states1 = matmul_hadUt(key_states_refresh)
             else:
-                key_states1 = key_states_refresh
+                if KRON:
+                    key_states1 = key_states_refresh @ kron_mat_inv
+                else:
+                    key_states1 = key_states_refresh
             #key_states1[~mask_bottom1]=0
             #print('original key_state')
             #print(key_states)
@@ -447,13 +458,19 @@ class LlamaAttention(nn.Module):
             if HADAMARD:
                 value_states_refresh = matmul_hadU(value_states1)
             else:
-                value_states_refresh = value_states1
+                if KRON:
+                    value_states_refresh = value_states1 @ kron_mat
+                else:
+                    value_states_refresh = value_states1
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS1)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             if HADAMARD:
                 value_states1 = matmul_hadUt(value_states_refresh)
             else:
-                value_states1 = value_states_refresh
+                if KRON:
+                    value_states1 = value_states_refresh @ kron_mat_inv
+                else:
+                    value_states1 = value_states_refresh
             key_states1[~mask_bottom1]=0
             value_states1[~mask_bottom1]=0
             
@@ -473,7 +490,10 @@ class LlamaAttention(nn.Module):
             if HADAMARD:
                 key_states_refresh = matmul_hadU(key_states2)
             else:
-                key_states_refresh = key_states2
+                if KRON:
+                    key_states_refresh = key_states2 @ kron_mat
+                else:
+                    key_states_refresh = key_states2
             #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS2)
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS2)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
@@ -481,18 +501,27 @@ class LlamaAttention(nn.Module):
             if HADAMARD:
                 key_states2 = matmul_hadUt(key_states_refresh)
             else:
-                key_states2 = key_states_refresh
+                if KRON:
+                    key_states2 = key_states_refresh @ kron_mat_inv
+                else:
+                    key_states2 = key_states_refresh
             #key_states2[~mask_bottom2]=0
             if HADAMARD:
                 value_states_refresh = matmul_hadU(value_states2)
             else:
-                value_states_refresh = value_states2
+                if KRON:
+                    value_states_refresh = value_states2 @ kron_mat
+                else:
+                    value_states_refresh = value_states2
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS2)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             if HADAMARD:
                 value_states2 = matmul_hadUt(value_states_refresh)
             else:
-                value_states2 = value_states_refresh
+                if KRON:
+                    value_states2 = value_states_refresh @ kron_mat_inv
+                else:
+                    value_states2 = value_states_refresh
             key_states2[~mask_bottom2]=0
             value_states2[~mask_bottom2]=0
 
@@ -512,7 +541,10 @@ class LlamaAttention(nn.Module):
             if HADAMARD:
                 key_states_refresh = matmul_hadU(key_states3)
             else:
-                key_states_refresh = key_states3
+                if KRON:
+                    key_states_refresh = key_states3 @ kron_mat
+                else:
+                    key_states_refresh = key_states3
             #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS3)
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS3)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
@@ -520,18 +552,27 @@ class LlamaAttention(nn.Module):
             if HADAMARD:
                 key_states3 = matmul_hadUt(key_states_refresh)
             else:
-                key_states3 = key_states_refresh
+                if KRON:
+                    key_states3 = key_states_refresh @ kron_mat_inv
+                else:
+                    key_states3 = key_states_refresh
             #key_states2[~mask_bottom2]=0
             if HADAMARD:
                 value_states_refresh = matmul_hadU(value_states3)
             else:
-                value_states_refresh = value_states3
+                if KRON:
+                    value_states_refresh = value_states3 @ kron_mat
+                else:
+                    value_states_refresh = value_states3
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS3)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             if HADAMARD:
                 value_states3 = matmul_hadUt(value_states_refresh)
             else:
-                value_states3 = value_states_refresh
+                if KRON:
+                    value_states3 = value_states_refresh @ kron_mat_inv
+                else:
+                    value_states3 = value_states_refresh
             key_states3[~mask_bottom3]=0
             value_states3[~mask_bottom3]=0
 
@@ -544,7 +585,10 @@ class LlamaAttention(nn.Module):
             if HADAMARD:
                 key_states_refresh = matmul_hadU(key_states4)
             else:
-                key_states_refresh = key_states4
+                if KRON:
+                    key_states_refresh = key_states4 @ kron_mat
+                else:
+                    key_states_refresh = key_states4
             #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS3)
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS4)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
@@ -552,18 +596,27 @@ class LlamaAttention(nn.Module):
             if HADAMARD:
                 key_states4 = matmul_hadUt(key_states_refresh)
             else:
-                key_states4 = key_states_refresh
+                if KRON:
+                    key_states4 = key_states_refresh @ kron_mat_inv
+                else:
+                    key_states4 = key_states_refresh
             #key_states4[mask_bottom3] = 0
             if HADAMARD:
                 value_states_refresh = matmul_hadU(value_states4)
             else:
-                value_states_refresh = value_states4
+                if KRON:
+                    value_states_refresh = value_states4 @ kron_mat
+                else:
+                    value_states_refresh = value_states4
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS4)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             if HADAMARD:
                 value_states4 = matmul_hadUt(value_states_refresh)
             else:
-                value_states4 = value_states_refresh
+                if KRON:
+                    value_states4 = value_states_refresh @ kron_mat_inv
+                else:
+                    value_states4 = value_states_refresh
             key_states4[mask_bottom3] = 0
             value_states4[mask_bottom3] = 0
             
