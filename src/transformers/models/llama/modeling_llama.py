@@ -572,10 +572,10 @@ class LlamaAttention(nn.Module):
             recent_budget_ratio = 0.03
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
-            if heavy_budget > 128:
-                heavy_budget = 128
-            if recent_budget > 384:
-                recent_budget = 384
+            #if heavy_budget > 128:
+            #    heavy_budget = 128
+            #if recent_budget > 384:
+            #    recent_budget = 384
             # Heavy Hitter Mask (Based on global statistics)
             tmp_attn = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights.dtype)
             tmp_sum = torch.sum(tmp_attn, dim=-2) 
