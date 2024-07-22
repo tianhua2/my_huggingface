@@ -388,13 +388,14 @@ class LlamaAttention(nn.Module):
             attn_weights_temp = attn_weights_temp + causal_mask
             attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
         
-        DYNQ=False
+        DYNQ=True
         HADAMARD = False
         
         KRON = True
         kron_size= key_states.shape[-1]
         kron_dtype = key_states.dtype
-        kron_mat, kron_mat_inv = kron_mat_calc(kron_size, kron_dtype)
+        #kron_mat, kron_mat_inv = kron_mat_calc(kron_size, kron_dtype)  #50% sparse hadamard
+        kron_mat, kron_mat_inv = kron_mat_calc(kron_size/2, kron_dtype)  #75% sparse hadamard
         kron_mat = kron_mat.to(key_states)
         kron_mat_inv = kron_mat_inv.to(key_states)
         if DYNQ:
@@ -668,7 +669,7 @@ class LlamaAttention(nn.Module):
             H2O = True
         else:
             H2O = False
-        H2O = False
+        H2O = True
         if H2O:
             ### Heavy + Recent
             heavy_budget_ratio = 0.11
@@ -696,16 +697,16 @@ class LlamaAttention(nn.Module):
             attn_weights[~mask_bottom] = torch.finfo(attn_weights.dtype).min
 
         #Quantize Softmax input
-        quant_attn = True
+        quant_attn = False
         attn_bit = 8
         if quant_attn:
             #attn_weights_quant = matmul_hadU(attn_weights)
             #print('hadamard attn ', attn_weights_quant)
-            print('attn ', attn_weights)
+            #print('attn ', attn_weights)
             attn_weights_quant, scale_attn_weights_list, zero_attn_weights_list = asym_quantize_and_pack_i4(attn_weights, bits=attn_bit)
-            print('quant attn ', attn_weights_quant)
+            #print('quant attn ', attn_weights_quant)
             attn_weights = unpack_i4_and_asym_dequantize(attn_weights_quant, scale_attn_weights_list, zero_attn_weights_list)
-            print('dequant attn ', attn_weights)
+            #print('dequant attn ', attn_weights)
             #attn_weights = matmul_hadUt(attn_weights_quant)
         
         # upcast attention to fp32
