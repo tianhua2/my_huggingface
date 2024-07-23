@@ -390,7 +390,7 @@ class LlamaAttention(nn.Module):
             attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
         
         DYNQ=True
-        HADAMARD = True
+        HADAMARD = False
         
         KRON = False
         kron_size= key_states.shape[-1]
