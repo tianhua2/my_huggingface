@@ -392,7 +392,7 @@ class LlamaAttention(nn.Module):
         DYNQ=True
         HADAMARD = False
         
-        KRON = False
+        KRON = True
         kron_size= key_states.shape[-1]
         kron_dtype = key_states.dtype
         kron_mat, kron_mat_inv = kron_mat_calc(kron_size, kron_dtype)  #50% sparse hadamard
