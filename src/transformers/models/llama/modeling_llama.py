@@ -388,11 +388,11 @@ class LlamaAttention(nn.Module):
             #print(5, causal_mask.shape)
             attn_weights_temp = attn_weights_temp + causal_mask
             attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
-        print(self.config.my_new_cfg )
-        DYNQ=False
-        HADAMARD = False
         
-        KRON = True
+        DYNQ=self.config.DYNQ
+        HADAMARD = self.config.HADAMARD
+        
+        KRON = self.config.KRON
         kron_size= key_states.shape[-1]
         kron_dtype = key_states.dtype
         kron_mat, kron_mat_inv = kron_mat_calc(kron_size, kron_dtype)  #50% sparse hadamard
@@ -400,13 +400,13 @@ class LlamaAttention(nn.Module):
         kron_mat = kron_mat.to(key_states)
         kron_mat_inv = kron_mat_inv.to(key_states)
         if DYNQ:
-            KV_BITS1=4
-            KV_BITS2=3
-            KV_BITS3=4
-            KV_BITS4 = 4
-            heavy_budget_ratio1 = 0.06
-            heavy_budget_ratio2 = 0.14
-            heavy_budget_ratio3 = 0.15
+            KV_BITS1=self.config.KV_BITS1
+            KV_BITS2=self.config.KV_BITS2
+            KV_BITS3=self.config.KV_BITS3
+            KV_BITS4 = self.config.KV_BITS4
+            heavy_budget_ratio1 = self.config.heavy_budget_ratio1
+            heavy_budget_ratio2 = self.config.heavy_budget_ratio2
+            heavy_budget_ratio3 = self.config.heavy_budget_ratio3
             
             key_states1=key_states.detach().clone()
             value_states1=value_states.detach().clone()    
@@ -641,8 +641,8 @@ class LlamaAttention(nn.Module):
         #old_token_end = -1
         #old_token_begin = int(kv_seq_len * 0.2)
         #old_token_begin = 0
-        REFRESH = False
-        KV_BITS=3
+        REFRESH = self.config.REFRESH
+        KV_BITS=self.config.KV_BITS
         #if kv_seq_len % 128 == 0 and kv_seq_len != 0 and REFRESH:
         if REFRESH:
             key_states_refresh = matmul_hadU(key_states[:,:,old_token_begin:old_token_end,:])
@@ -670,11 +670,11 @@ class LlamaAttention(nn.Module):
             H2O = True
         else:
             H2O = False
-        H2O = False
+        H2O = self.config.H2O
         if H2O:
             ### Heavy + Recent
-            heavy_budget_ratio = 0.11
-            recent_budget_ratio = 0.03
+            heavy_budget_ratio = self.config.heavy_budget_ratio
+            recent_budget_ratio = self.config.recent_budget_ratio
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
             #if heavy_budget > 128:
