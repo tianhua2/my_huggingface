@@ -140,6 +140,7 @@ class LlamaConfig(PretrainedConfig):
         attention_bias=False,
         attention_dropout=0.0,
         mlp_bias=False,
+        my_new_cfg = 'hello',
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -165,7 +166,8 @@ class LlamaConfig(PretrainedConfig):
         self.attention_bias = attention_bias
         self.attention_dropout = attention_dropout
         self.mlp_bias = mlp_bias
-
+        self.my_new_cfg = my_new_cfg
+        
         super().__init__(
             pad_token_id=pad_token_id,
             bos_token_id=bos_token_id,
