@@ -388,7 +388,7 @@ class LlamaAttention(nn.Module):
             #print(5, causal_mask.shape)
             attn_weights_temp = attn_weights_temp + causal_mask
             attn_weights_temp = torch.max(attn_weights_temp, torch.tensor(torch.finfo(attn_weights_temp.dtype).min))
-        
+        print(self.config.my_new_cfg )
         DYNQ=False
         HADAMARD = False
         
