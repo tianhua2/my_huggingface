@@ -140,7 +140,21 @@ class LlamaConfig(PretrainedConfig):
         attention_bias=False,
         attention_dropout=0.0,
         mlp_bias=False,
-        my_new_cfg = 'hello',
+        DYNQ=False,
+        HADAMARD=False,
+        KRON=False,
+        KV_BITS1=4,
+        KV_BITS2=3,
+        KV_BITS3=4,
+        KV_BITS4 = 4,
+        heavy_budget_ratio1 = 0.06,
+        heavy_budget_ratio2 = 0.14,
+        heavy_budget_ratio3 = 0.15,
+        REFRESH = False,
+        KV_BITS=3,
+        H2O = False,
+        heavy_budget_ratio = 0.11,
+        recent_budget_ratio = 0.03,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -166,7 +180,22 @@ class LlamaConfig(PretrainedConfig):
         self.attention_bias = attention_bias
         self.attention_dropout = attention_dropout
         self.mlp_bias = mlp_bias
-        self.my_new_cfg = my_new_cfg
+        
+        self.DYNQ=DYNQ,
+        self.HADAMARD=HADAMARD,
+        self.KRON=KRON,
+        self.KV_BITS1=KV_BITS1,
+        self.KV_BITS2=KV_BITS2,
+        self.KV_BITS3=KV_BITS3,
+        self.KV_BITS4 = KV_BITS4,
+        self.heavy_budget_ratio1 = heavy_budget_ratio1,
+        self.heavy_budget_ratio2 = heavy_budget_ratio2,
+        self.heavy_budget_ratio3 = heavy_budget_ratio3,
+        self.REFRESH = REFRESH,
+        self.KV_BITS=KV_BITS,
+        self.H2O = H2O,
+        self.heavy_budget_ratio = heavy_budget_ratio,
+        self.recent_budget_ratio = recent_budget_ratio,
         
         super().__init__(
             pad_token_id=pad_token_id,
