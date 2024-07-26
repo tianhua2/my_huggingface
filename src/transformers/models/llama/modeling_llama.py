@@ -710,8 +710,40 @@ class LlamaAttention(nn.Module):
             #print('dequant attn ', attn_weights)
             #attn_weights = matmul_hadUt(attn_weights_quant)
         
+        def my_exp(x):
+            x_max = torch.max(x, -1, keepdim=True)[0]
+            input = x_max-x
+            input = input*1.4375
+            int_part = torch.floor(input)
+            int_neg = int_part*-1
+            frac_part = input - int_part
+            res=torch.multiply(torch.pow(2, int_neg),torch.subtract(1, torch.multiply(frac_part, 0.5)))
+            return res
+
+        def my_div(a, b):
+            e_a_raw = torch.log2(a)
+            e_a = torch.floor(e_a_raw)
+            m_a_raw = a / torch.pow(2, e_a)
+            m_a = torch.subtract(m_a_raw,1)
+
+            e_b_raw = torch.log2(b)
+            e_b = torch.floor(e_b_raw)
+            m_b_raw = b / torch.pow(2, e_b)
+            m_b = torch.subtract(m_b_raw,1)
+
+            condition = torch.gt(m_a, m_b)
+            res = torch.where(condition, torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(m_a, m_b)+1),
+                    torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(1, torch.multiply(torch.subtract(m_b, m_a),0.5))))
+        return res
+
+        def my_softmax(x):
+            exp = my_exp(x)
+            sum = torch.sum(exp,dim=-1,keepdim=True)
+            return my_div(exp, sum)
+            
         # upcast attention to fp32
-        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        #attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        attn_weights=my_softmax(attn_weights).to(query_states.dtype)
         attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
 
         # real KV drop
