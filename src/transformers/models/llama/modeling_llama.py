@@ -732,9 +732,8 @@ class LlamaAttention(nn.Module):
             m_b = torch.subtract(m_b_raw,1)
 
             condition = torch.gt(m_a, m_b)
-            res = torch.where(condition, torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(m_a, m_b)+1),
-                    torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(1, torch.multiply(torch.subtract(m_b, m_a),0.5))))
-        return res
+            res = torch.where(condition, torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(m_a, m_b)+1), torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(1, torch.multiply(torch.subtract(m_b, m_a),0.5))))
+            return res
 
         def my_softmax(x):
             exp = my_exp(x)
