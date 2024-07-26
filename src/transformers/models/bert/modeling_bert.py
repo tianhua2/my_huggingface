@@ -334,18 +334,48 @@ class BertSelfAttention(nn.Module):
 
         # Normalize the attention scores to probabilities.
         #attention_probs = nn.functional.softmax(attention_scores, dim=-1)
+
+        
+        def my_exp(x):
+            x_max = torch.max(x, -1, keepdim=True)[0]
+            input = x_max-x
+            input = input*1.4375
+            int_part = torch.floor(input)
+            int_neg = int_part*-1
+            frac_part = input - int_part
+            res=torch.multiply(torch.pow(2, int_neg),torch.subtract(1, torch.multiply(frac_part, 0.5)))
+            return res
+
+        def my_div(a, b):
+            e_a_raw = torch.log2(a)
+            e_a = torch.floor(e_a_raw)
+            m_a_raw = a / torch.pow(2, e_a)
+            m_a = torch.subtract(m_a_raw,1)
+
+            e_b_raw = torch.log2(b)
+            e_b = torch.floor(e_b_raw)
+            m_b_raw = b / torch.pow(2, e_b)
+            m_b = torch.subtract(m_b_raw,1)
+
+            condition = torch.gt(m_a, m_b)
+            res = torch.where(condition, torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(m_a, m_b)+1), torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(1, torch.multiply(torch.subtract(m_b, m_a),0.5))))
+            return res
+
         def my_softmax(x):
-            th = nn.Threshold(1, -100)
-            a = th(x)
-            maxes = torch.max(a, -1, keepdim=True)[0]
-            x_exp = torch.exp(a - maxes)
-            x_exp_sum = torch.sum(x_exp, -1, keepdim=True)
-            output_custom = x_exp/x_exp_sum
-            return output_custom
-        #attention_probs[0][4] = my_softmax(attention_scores[0][4])
-        #attention_probs[0][5] = my_softmax(attention_scores[0][5])
-        #attention_probs[0][6] = my_softmax(attention_scores[0][6])
-        #attention_probs[0][7] = my_softmax(attention_scores[0][7])
+            exp = my_exp(x)
+            sum = torch.sum(exp,dim=-1,keepdim=True)
+            return my_div(exp, sum)        
+        attention_probs = my_softmax(attention_scores)
+        
+        #def my_softmax(x):
+        #    th = nn.Threshold(1, -100)
+        #    a = th(x)
+        #    maxes = torch.max(a, -1, keepdim=True)[0]
+        #    x_exp = torch.exp(a - maxes)
+        #    x_exp_sum = torch.sum(x_exp, -1, keepdim=True)
+        #    output_custom = x_exp/x_exp_sum
+        #    return output_custom
+
         def softmax_in_process(x):
             for i in range(len(x)):
                 if i % 5 == 0:
@@ -357,13 +387,13 @@ class BertSelfAttention(nn.Module):
                     x[i] += mask     
             return x
 
-        for i in range(len(attention_scores)):        #batch
+        #for i in range(len(attention_scores)):        #batch
             #for j in range(len(attention_scores[i])):     #head
             #    attention_scores[i][j] = softmax_in_process(attention_scores[i][j])
-            output = list(map(softmax_in_process, torch.unbind(attention_scores[i], 0)))
-            attention_scores[i] = torch.stack(output, 0)
+        #    output = list(map(softmax_in_process, torch.unbind(attention_scores[i], 0)))
+        #    attention_scores[i] = torch.stack(output, 0)
             
-        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
+        #attention_probs = nn.functional.softmax(attention_scores, dim=-1)
         
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
