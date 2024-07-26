@@ -741,8 +741,8 @@ class LlamaAttention(nn.Module):
             return my_div(exp, sum)
             
         # upcast attention to fp32
-        #attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
-        attn_weights=my_softmax(attn_weights).to(query_states.dtype)
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        #attn_weights=my_softmax(attn_weights).to(query_states.dtype)
         attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
 
         # real KV drop
