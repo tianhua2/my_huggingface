@@ -147,7 +147,7 @@ def rand_flip_bits(xhard, bit_width=None, prob_one_zero=None, prob_zero_one=None
     if has_sign:
         sign = xhard.sign()
         ############## sign option
-        sign = (sign > 0).float()    # use 0 to indicate negative sign and 1 to represent the positive sign, 0 has the sign of 0
+        sign = (sign > 0)    # use 0 to indicate negative sign and 1 to represent the positive sign, 0 has the sign of 0
         #sign = (sign >= 0).float()   # use 0 to indicate negative sign and 1 to represent the positive sign, 0 has the sign of 1
         ###########################
         sign = sign.to(xhard)
@@ -156,7 +156,7 @@ def rand_flip_bits(xhard, bit_width=None, prob_one_zero=None, prob_zero_one=None
         #print('rand_sign ', rand_sign.get_device())
         #print('sign ', sign.get_device())
         #print('prob_one_zero ', prob_one_zero.get_device())
-        sign_flip = sign * (rand_sign >= prob_one_zero) + torch.clamp(((sign-1) * (rand_sign < prob_one_zero)), 0,float('inf'))
+        sign_flip = sign * (rand_sign >= prob_one_zero) + ((sign-1) * (rand_sign < prob_one_zero)).clamp(min=0)
         sign_flip = sign * (rand_sign >= prob_zero_one) + ((sign+1) * (rand_sign < prob_zero_one)).clamp(0,1)    
         sign_flip = sign_flip*2 - 1
         act_width = bit_width-1
@@ -169,7 +169,7 @@ def rand_flip_bits(xhard, bit_width=None, prob_one_zero=None, prob_zero_one=None
         rand = torch.rand(xhard.shape).to(xhard)
         bit_map = (xhard.int())%2
         xhard = xhard/2
-        bit_map = bit_map * (rand>=prob_one_zero) + ((bit_map-1) * (rand<prob_one_zero)).clamp(0,float('inf'))
+        bit_map = bit_map * (rand>=prob_one_zero) + ((bit_map-1) * (rand<prob_one_zero)).clamp(min=0)
         bit_map = bit_map * (rand>=prob_zero_one) + ((bit_map+1) * (rand<prob_zero_one)).clamp(0,1)
         xhard_new += (bit_map * (2**b))
     
