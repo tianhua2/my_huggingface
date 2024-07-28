@@ -152,12 +152,11 @@ def rand_flip_bits(xhard, bit_width=None, prob_one_zero=None, prob_zero_one=None
         ###########################
         sign = sign.to(xhard)
         rand_sign = torch.rand(xhard.shape)
-        #print(rand_sign.get_device())
-        #print(sign.get_device())
-        #print(rand_sign.get_device())
-        #print(prob_one_zero.get_device())
-        #print(prob_one_zero.get_device())
-        sign_flip = sign * (rand_sign >= prob_one_zero) + ((sign-1) * (rand_sign < prob_one_zero)).clamp(0,float('inf'))
+        print(rand_sign.get_device())
+        print(sign.get_device())
+        print(rand_sign.get_device())
+        print(prob_one_zero.get_device())
+        sign_flip = sign * (rand_sign >= prob_one_zero) + torch.clamp(((sign-1) * (rand_sign < prob_one_zero)), 0,float('inf'))
         sign_flip = sign * (rand_sign >= prob_zero_one) + ((sign+1) * (rand_sign < prob_zero_one)).clamp(0,1)    
         sign_flip = sign_flip*2 - 1
         act_width = bit_width-1
