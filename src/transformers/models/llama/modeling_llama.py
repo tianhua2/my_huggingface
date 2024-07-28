@@ -508,7 +508,7 @@ class LlamaAttention(nn.Module):
                     key_states_refresh = key_states2
             #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS2)
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS2)
-            key_states_refresh = rand_flip_bits(key_states_refresh, KV_BITS2, prob_one_zero, prob_zero_one) 
+            key_states_refresh = rand_flip_bits(key_states_refresh, KV_BITS2, prob_one_zero, prob_zero_one, False) 
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
             #key_states2 = matmul_hadUt(torch.transpose(key_states_refresh,-2,-1))
             if HADAMARD:
@@ -527,7 +527,7 @@ class LlamaAttention(nn.Module):
                 else:
                     value_states_refresh = value_states2
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS2)
-            value_states_refresh = rand_flip_bits(value_states_refresh, KV_BITS2, prob_one_zero, prob_zero_one) 
+            value_states_refresh = rand_flip_bits(value_states_refresh, KV_BITS2, prob_one_zero, prob_zero_one, False) 
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             if HADAMARD:
                 value_states2 = matmul_hadUt(value_states_refresh)
