@@ -142,7 +142,35 @@ def kron_mat_calc(size, dtype=torch.float16):
 def is_pow2(n):
     return (n & (n - 1) == 0) and (n > 0)
 
+def rand_flip_bits(xhard, bit_width=None, prob_one_zero=None, prob_zero_one=None, has_sign=True):
+    act_width = bit_width
+    if has_sign:
+        sign = xhard.sign()
+        ############## sign option
+        sign = (sign > 0).float()    # use 0 to indicate negative sign and 1 to represent the positive sign, 0 has the sign of 0
+        #sign = (sign >= 0).float()   # use 0 to indicate negative sign and 1 to represent the positive sign, 0 has the sign of 1
+        ###########################
+        rand_sign = torch.rand(xhard.shape)
+        sign_flip = sign * (rand_sign >= prob_one_zero) + ((sign-1) * (rand_sign < prob_one_zero)).clamp(0,float('inf'))
+        sign_flip = sign * (rand_sign >= prob_zero_one) + ((sign+1) * (rand_sign < prob_zero_one)).clamp(0,1)    
+        sign_flip = sign_flip*2 - 1
+        act_width = bit_width-1
+        if act_width == 0:   # means there is only 1 bits
+            return sign_flip
 
+    xhard = xhard.abs()
+    xhard_new = 0
+    for b in range(act_width):
+        rand = torch.rand(xhard.shape)
+        bit_map = (xhard.int())%2
+        xhard = xhard/2
+        bit_map = bit_map * (rand>=prob_one_zero) + ((bit_map-1) * (rand<prob_one_zero)).clamp(0,float('inf'))
+        bit_map = bit_map * (rand>=prob_zero_one) + ((bit_map+1) * (rand<prob_zero_one)).clamp(0,1)
+        xhard_new += (bit_map * (2**b))
+    
+    if has_sign:
+        return xhard_new*sign_flip
+        
 def get_minq_maxq(bits: int, sym: bool):
     if sym:
         maxq = torch.tensor(2**(bits-1)-1)
@@ -161,6 +189,10 @@ def asym_quantize_and_pack_i4(x: torch.Tensor, bits: int):
     zero = -xmin
     q = torch.clamp(torch.round((x + zero) / scale), 0, maxq)
 
+    prob_one_zero = 1e-10
+    prob_zero_one = 1e-10
+    q = rand_flip_bits(q, bits, prob_one_zero, prob_zero_one) 
+    
     # pack int4
     #q = q.to(dtype=torch.uint8)
     #q = q[..., 0::2] | (q[..., 1::2] << 4)
