@@ -175,6 +175,7 @@ def rand_flip_bits(xhard, bit_width=None, prob_one_zero=None, prob_zero_one=None
     
     if has_sign:
         return xhard_new*sign_flip
+    return xhard_new
         
 def get_minq_maxq(bits: int, sym: bool):
     if sym:
