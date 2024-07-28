@@ -404,9 +404,14 @@ class LlamaAttention(nn.Module):
             KV_BITS2=self.config.KV_BITS2
             KV_BITS3=self.config.KV_BITS3
             KV_BITS4 = self.config.KV_BITS4
-            heavy_budget_ratio1 = self.config.heavy_budget_ratio1
-            heavy_budget_ratio2 = self.config.heavy_budget_ratio2
-            heavy_budget_ratio3 = self.config.heavy_budget_ratio3
+            if self.layer_idx < 16:
+                heavy_budget_ratio1 = self.config.heavy_budget_ratio1+0.02
+                heavy_budget_ratio2 = self.config.heavy_budget_ratio2+0.02
+                heavy_budget_ratio3 = self.config.heavy_budget_ratio3+0.02
+            else:
+                heavy_budget_ratio1 = self.config.heavy_budget_ratio1-0.02
+                heavy_budget_ratio2 = self.config.heavy_budget_ratio2-0.02
+                heavy_budget_ratio3 = self.config.heavy_budget_ratio3-0.02
             
             key_states1=key_states.detach().clone()
             value_states1=value_states.detach().clone()    
@@ -673,8 +678,13 @@ class LlamaAttention(nn.Module):
         H2O = self.config.H2O
         if H2O:
             ### Heavy + Recent
-            heavy_budget_ratio = self.config.heavy_budget_ratio
-            recent_budget_ratio = self.config.recent_budget_ratio
+            if self.layer_idx < 16:
+                heavy_budget_ratio = self.config.heavy_budget_ratio+0.01
+                recent_budget_ratio = self.config.recent_budget_ratio+0.01
+            else:
+                heavy_budget_ratio = self.config.heavy_budget_ratio-0.01
+                recent_budget_ratio = self.config.recent_budget_ratio-0.01
+                
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
             #if heavy_budget > 128:
