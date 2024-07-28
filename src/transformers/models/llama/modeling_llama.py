@@ -55,7 +55,7 @@ if is_flash_attn_2_available():
     from flash_attn import flash_attn_func, flash_attn_varlen_func
     from flash_attn.bert_padding import index_first_axis, pad_input, unpad_input  # noqa
 
-from .hadamard import matmul_hadU, matmul_hadUt, get_minq_maxq, asym_quantize_and_pack_i4, unpack_i4_and_asym_dequantize, kron_mat_calc
+from .hadamard import matmul_hadU, matmul_hadUt, get_minq_maxq, asym_quantize_and_pack_i4, unpack_i4_and_asym_dequantize, kron_mat_calc, rand_flip_bits
 print('running my llama')
 
 logger = logging.get_logger(__name__)
@@ -399,6 +399,10 @@ class LlamaAttention(nn.Module):
         #kron_mat, kron_mat_inv = kron_mat_calc(kron_size/2, kron_dtype)  #75% sparse hadamard
         kron_mat = kron_mat.to(key_states)
         kron_mat_inv = kron_mat_inv.to(key_states)
+
+        prob_one_zero = torch.tensor(1e-5)
+        prob_zero_one = torch.tensor(1e-6)
+        
         if DYNQ:
             KV_BITS1=self.config.KV_BITS1
             KV_BITS2=self.config.KV_BITS2
@@ -504,6 +508,7 @@ class LlamaAttention(nn.Module):
                     key_states_refresh = key_states2
             #key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(torch.transpose(key_states_refresh,-2,-1), bits=KV_BITS2)
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS2)
+            key_states_refresh = rand_flip_bits(key_states_refresh, bits, prob_one_zero, prob_zero_one) 
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list)
             #key_states2 = matmul_hadUt(torch.transpose(key_states_refresh,-2,-1))
             if HADAMARD:
@@ -522,6 +527,7 @@ class LlamaAttention(nn.Module):
                 else:
                     value_states_refresh = value_states2
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS2)
+            value_states_refresh = rand_flip_bits(value_states_refresh, bits, prob_one_zero, prob_zero_one) 
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             if HADAMARD:
                 value_states2 = matmul_hadUt(value_states_refresh)
