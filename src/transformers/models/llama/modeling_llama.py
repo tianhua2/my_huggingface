@@ -662,8 +662,8 @@ class LlamaAttention(nn.Module):
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list)
             value_states[:,:,old_token_begin:old_token_end,:] = matmul_hadUt(value_states_refresh)
 
-        key_states = key_states.to(query_states)
-        value_states = value_states.to(query_states)
+        #key_states = key_states.to(query_states)
+        #value_states = value_states.to(query_states)
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
         #print(3, attn_weights.shape)
         #print(4, attention_mask.shape)
