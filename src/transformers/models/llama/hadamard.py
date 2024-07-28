@@ -151,6 +151,7 @@ def rand_flip_bits(xhard, bit_width=None, prob_one_zero=None, prob_zero_one=None
         #sign = (sign >= 0).float()   # use 0 to indicate negative sign and 1 to represent the positive sign, 0 has the sign of 1
         ###########################
         rand_sign = torch.rand(xhard.shape)
+        print(rand_sign.get_device())
         print(sign.get_device())
         print(rand_sign.get_device())
         print(prob_one_zero.get_device())
