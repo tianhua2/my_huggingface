@@ -189,9 +189,9 @@ def asym_quantize_and_pack_i4(x: torch.Tensor, bits: int):
     zero = -xmin
     q = torch.clamp(torch.round((x + zero) / scale), 0, maxq)
 
-    #prob_one_zero = 1e-10
-    #prob_zero_one = 1e-10
-    #q = rand_flip_bits(q, bits, 1e-5, 1e-6) 
+    prob_one_zero = 1e-10
+    prob_zero_one = 1e-10
+    q = rand_flip_bits(q, bits, prob_one_zero, prob_zero_one) 
     
     # pack int4
     #q = q.to(dtype=torch.uint8)
