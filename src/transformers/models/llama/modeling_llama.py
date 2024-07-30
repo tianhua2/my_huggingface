@@ -692,7 +692,10 @@ class LlamaAttention(nn.Module):
             else:
                 heavy_budget_ratio = self.config.heavy_budget_ratio-0.01
                 recent_budget_ratio = self.config.recent_budget_ratio-0.01
-                
+
+            heavy_budget_ratio = self.config.heavy_budget_ratio
+            recent_budget_ratio = self.config.recent_budget_ratio
+            
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
             #if heavy_budget > 128:
