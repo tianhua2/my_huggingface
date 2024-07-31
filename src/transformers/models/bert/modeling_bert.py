@@ -337,7 +337,7 @@ class BertSelfAttention(nn.Module):
 
         
         def my_exp(x):
-            mantisa_bit = 10
+            mantisa_bit = 5
             e_x_raw = torch.log2(x)
             e_x = torch.floor(e_x_raw)
             m_x_raw = x / torch.pow(2, e_x)
@@ -371,7 +371,7 @@ class BertSelfAttention(nn.Module):
             return res
 
         def my_softmax(x):
-            mantisa_bit = 10
+            mantisa_bit = 5
             exp = my_exp(x)
             
             e_exp_raw = torch.log2(exp)
