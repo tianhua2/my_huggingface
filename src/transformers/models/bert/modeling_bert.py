@@ -352,7 +352,8 @@ class BertSelfAttention(nn.Module):
             int_part = torch.floor(input)
             int_neg = int_part*-1
             frac_part = input - int_part
-            res=torch.multiply(torch.pow(2, int_neg),torch.subtract(1, torch.multiply(frac_part, 0.5)))
+            #res=torch.multiply(torch.pow(2, int_neg),torch.subtract(1, torch.multiply(frac_part, 0.5)))
+            res = torch.pow(2, int_neg)*torch.pow(2, frac_part)
             return res
 
         def my_div(a, b):
@@ -366,12 +367,13 @@ class BertSelfAttention(nn.Module):
             m_b_raw = b / torch.pow(2, e_b)
             m_b = torch.subtract(m_b_raw,1)
 
-            condition = torch.gt(m_a, m_b)
-            res = torch.where(condition, torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(m_a, m_b)+1), torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(1, torch.multiply(torch.subtract(m_b, m_a),0.5))))
+            #condition = torch.gt(m_a, m_b)
+            #res = torch.where(condition, torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(m_a, m_b)+1), torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(1, torch.multiply(torch.subtract(m_b, m_a),0.5))))
+            res = a/b
             return res
 
         def my_softmax(x):
-            print('my_softmax')
+            #print('my_softmax')
             exp = my_exp(x)
 
             mantisa_bit = torch.tensor(15, dtype=torch.int32)
