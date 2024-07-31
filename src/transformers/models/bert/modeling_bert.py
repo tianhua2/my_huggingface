@@ -344,16 +344,17 @@ class BertSelfAttention(nn.Module):
             m_x = torch.floor(m_x_raw * torch.pow(2, torch.tensor(23, dtype=torch.int32)) / torch.pow(2, mantisa_bit))*torch.pow(2, mantisa_bit) / torch.pow(2, torch.tensor(23, dtype=torch.int32))
             x = torch.pow(2, e_x) * m_x
             
-            #x_max = torch.max(x[...,0::10], -1, keepdim=True)[0]
+            x_max = torch.max(x[...,0::2], -1, keepdim=True)[0]
             #x_max=100
-            #input = x_max-x
-            input = x
+            input = x_max-x
+            #input = x
             input = input*1.4375
             int_part = torch.floor(input)
             int_neg = int_part*-1
             frac_part = input - int_part
             #res=torch.multiply(torch.pow(2, int_neg),torch.subtract(1, torch.multiply(frac_part, 0.5)))
-            res = torch.pow(2, int_neg)*torch.pow(2, frac_part)
+            #res = torch.pow(2, int_neg)*torch.pow(2, frac_part)
+            res = torch.exp(x)
             return res
 
         def my_div(a, b):
