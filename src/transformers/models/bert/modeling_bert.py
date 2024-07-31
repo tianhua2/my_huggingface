@@ -354,7 +354,7 @@ class BertSelfAttention(nn.Module):
             frac_part = input - int_part
             #res=torch.multiply(torch.pow(2, int_neg),torch.subtract(1, torch.multiply(frac_part, 0.5)))
             #res = torch.pow(2, int_neg)*torch.pow(2, frac_part)
-            res = torch.exp(x_new-x_max)[0])
+            res = torch.exp(x_new-x_max)
             return res
 
         def my_div(a, b):
