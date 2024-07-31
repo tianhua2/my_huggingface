@@ -338,8 +338,9 @@ class BertSelfAttention(nn.Module):
         
         def my_exp(x):
             #x_max = torch.max(x[...,0::10], -1, keepdim=True)[0]
-            x_max=100
-            input = x_max-x
+            #x_max=100
+            #input = x_max-x
+            input = x
             input = input*1.4375
             int_part = torch.floor(input)
             int_neg = int_part*-1
