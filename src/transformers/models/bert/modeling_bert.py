@@ -342,9 +342,9 @@ class BertSelfAttention(nn.Module):
             e_x = torch.floor(e_x_raw)
             m_x_raw = x / torch.pow(2, e_x)
             m_x = torch.floor(m_x_raw * torch.pow(2, torch.tensor(23, dtype=torch.int32)) / torch.pow(2, mantisa_bit))*torch.pow(2, mantisa_bit) / torch.pow(2, torch.tensor(23, dtype=torch.int32))
-            x = torch.pow(2, e_x) * m_x
+            #x = torch.pow(2, e_x) * m_x
             
-            #x_max = torch.max(x[...,0::2], -1, keepdim=True)[0]
+            x_max = torch.max(x[...,0::2], -1, keepdim=True)[0]
             #x_max=100
             input = x_max-x
             #input = x
