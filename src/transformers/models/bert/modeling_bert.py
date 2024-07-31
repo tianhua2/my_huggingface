@@ -348,7 +348,7 @@ class BertSelfAttention(nn.Module):
             #x_max = torch.max(x, -1, keepdim=True)[0]
             #x_max=100
             #input = x_max-x
-            #input = x
+            input = x
             input = input*1.4375
             input_sign = torch.where(input >= 0, 1, -1)
             int_part = torch.floor(input)
