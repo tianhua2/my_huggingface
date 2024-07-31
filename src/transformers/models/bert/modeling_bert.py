@@ -333,7 +333,7 @@ class BertSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
+        #attention_probs = nn.functional.softmax(attention_scores, dim=-1)
 
         
         def my_exp(x):
@@ -344,7 +344,7 @@ class BertSelfAttention(nn.Module):
             m_x = torch.floor(m_x_raw * torch.pow(2, torch.tensor(23, dtype=torch.int32)) / torch.pow(2, mantisa_bit))*torch.pow(2, mantisa_bit) / torch.pow(2, torch.tensor(23, dtype=torch.int32))
             x = torch.pow(2, e_x) * m_x
             
-            x_max = torch.max(x[...,0::2], -1, keepdim=True)[0]
+            #x_max = torch.max(x[...,0::2], -1, keepdim=True)[0]
             #x_max=100
             input = x_max-x
             #input = x
@@ -354,7 +354,7 @@ class BertSelfAttention(nn.Module):
             frac_part = input - int_part
             #res=torch.multiply(torch.pow(2, int_neg),torch.subtract(1, torch.multiply(frac_part, 0.5)))
             #res = torch.pow(2, int_neg)*torch.pow(2, frac_part)
-            res = torch.exp(x)
+            res = torch.exp(x-torch.max(x[...,0::2], -1, keepdim=True)[0])
             return res
 
         def my_div(a, b):
@@ -386,7 +386,7 @@ class BertSelfAttention(nn.Module):
             
             sum = torch.sum(exp,dim=-1,keepdim=True)
             return my_div(exp, sum)        
-        #attention_probs = my_softmax(attention_scores)
+        attention_probs = my_softmax(attention_scores)
         
         #def my_softmax(x):
         #    th = nn.Threshold(1, -100)
