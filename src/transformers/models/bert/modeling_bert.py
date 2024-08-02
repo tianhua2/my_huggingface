@@ -347,14 +347,14 @@ class BertSelfAttention(nn.Module):
             x_max = torch.max(x[...,0::1], -1, keepdim=True)[0]
             #x_max = torch.max(x, -1, keepdim=True)[0]
             #x_max=100
-            #input = x-x_max
-            input = x
-            input = input*1.44140625
+            input = x-x_max
+            #input = x
+            input = input*1.4426950408889634073
             int_part = torch.floor(input)
             frac_part = input - int_part
             #res=torch.multiply(torch.pow(2, int_neg),torch.subtract(1, torch.multiply(frac_part, 0.5)))
             #res = torch.exp(int_part)*torch.exp(frac_part)
-            res = torch.pow(2, int_part)*(1.0+frac_part)
+            res = torch.pow(2, int_part)*(1.0+frac_part+frac_part**2/2)
             #res = torch.exp(x-x_max)
             return res
 
