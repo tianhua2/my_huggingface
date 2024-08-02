@@ -347,13 +347,13 @@ class BertSelfAttention(nn.Module):
             x_max = torch.max(x[...,0::1], -1, keepdim=True)[0]
             #x_max = torch.max(x, -1, keepdim=True)[0]
             #x_max=100
-            input = x-x_max
-            #input = x
-            input = input*1.4375
+            #input = x-x_max
+            input = x
+            #input = input*1.4375
             int_part = torch.floor(input)
             frac_part = input - int_part
             #res=torch.multiply(torch.pow(2, int_neg),torch.subtract(1, torch.multiply(frac_part, 0.5)))
-            res = torch.pow(2, int_part)*torch.pow(2, frac_part)
+            res = torch.exp(int_part)*torch.exp(frac_part)
             #res = torch.exp(x-x_max)
             return res
 
@@ -384,7 +384,8 @@ class BertSelfAttention(nn.Module):
             #m_exp = torch.floor(m_exp_raw * torch.pow(2, torch.tensor(23, dtype=torch.int32)) / torch.pow(2, mantisa_bit))*torch.pow(2, mantisa_bit) / torch.pow(2, torch.tensor(23, dtype=torch.int32))
             #exp = torch.pow(2, e_exp) * m_exp
             
-            sum = torch.sum(torch.exp(x-torch.max(x[...,0::1], -1, keepdim=True)[0]),dim=-1,keepdim=True)
+            #sum = torch.sum(torch.exp(x-torch.max(x[...,0::1], -1, keepdim=True)[0]),dim=-1,keepdim=True)
+            sum = torch.sum(torch.exp(x),dim=-1,keepdim=True)
             return my_div(exp, sum)        
         attention_probs = my_softmax(attention_scores)
         
