@@ -350,6 +350,7 @@ class BertSelfAttention(nn.Module):
             input = x-x_max
             #input = x
             #input = input*1.4426950408889634073
+            input = input*1.5
             int_part = torch.floor(input)
             frac_part = input - int_part
             #res=torch.multiply(torch.pow(2, int_neg),torch.subtract(1, torch.multiply(frac_part, 0.5)))
@@ -373,7 +374,11 @@ class BertSelfAttention(nn.Module):
 
             condition = torch.gt(m_a, m_b)
             #res = torch.where(condition, torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(m_a, m_b)+1), torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(1, torch.multiply(torch.subtract(m_b, m_a),0.5))))
-            res = a/b
+            
+            log_b = torch.log2(b)
+            log_b_round = torch.floor(log_b)+1
+            divider = torch.pow(2, log_b_round)
+            res = a/divider
             return res
 
         def my_softmax(x):
