@@ -350,14 +350,14 @@ class BertSelfAttention(nn.Module):
             input = x-x_max
             #input = x
             #input = input*1.4426950408889634073
-            input = input*1.5
+            input = input*torch.log2(math.e)
             int_part = torch.floor(input)
             frac_part = input - int_part
             #res=torch.multiply(torch.pow(2, int_neg),torch.subtract(1, torch.multiply(frac_part, 0.5)))
             #res = torch.exp(int_part)*torch.exp(frac_part)
             #res = torch.exp(int_part)*(1+frac_part)
-            res = torch.pow(2, int_part)*(1.0+frac_part-frac_part**2/2+frac_part**3/6)
-            #res = torch.pow(2, int_part)*torch.pow(2, frac_part)
+            #res = torch.pow(2, int_part)*(1.0+frac_part-frac_part**2/2+frac_part**3/6)
+            res = torch.pow(2, int_part)*torch.pow(2, frac_part)
             #res = torch.exp(x-x_max)
             return res
 
@@ -375,10 +375,7 @@ class BertSelfAttention(nn.Module):
             condition = torch.gt(m_a, m_b)
             #res = torch.where(condition, torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(m_a, m_b)+1), torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(1, torch.multiply(torch.subtract(m_b, m_a),0.5))))
             
-            log_b = torch.log2(b)
-            log_b_round = torch.floor(log_b)+1
-            divider = torch.pow(2, log_b_round)
-            res = a/divider
+            res = a/b
             return res
 
         def my_softmax(x):
