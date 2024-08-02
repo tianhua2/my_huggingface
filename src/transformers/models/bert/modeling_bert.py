@@ -386,7 +386,7 @@ class BertSelfAttention(nn.Module):
             #exp = torch.pow(2, e_exp) * m_exp
             
             #sum = torch.sum(torch.exp(x-torch.max(x[...,0::1], -1, keepdim=True)[0]),dim=-1,keepdim=True)
-            sum = torch.sum(torch.exp(x),dim=-1,keepdim=True)
+            sum = torch.sum(torch.exp(x-torch.max(x[...,0::1], -1, keepdim=True)[0]),dim=-1,keepdim=True)
             return my_div(exp, sum)        
         attention_probs = my_softmax(attention_scores)
         
