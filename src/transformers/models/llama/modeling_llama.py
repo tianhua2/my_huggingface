@@ -708,7 +708,7 @@ class LlamaAttention(nn.Module):
             
             coeff_length = tmp_sum.shape[-1]
             coeff = torch.range(0, coeff_length-1)
-            coeff = 1+self.config.score_coeff/(coeff_length-1)*coeff
+            coeff = 1+self.config.score_coeff/(coeff_length-1)*coeff.to(tmp_sum)
             tmp_sum = tmp_sum*coeff
             
             _, tmp_topk = tmp_sum.topk(k=heavy_budget, dim=-1)
