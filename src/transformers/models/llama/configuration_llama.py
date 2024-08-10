@@ -155,6 +155,7 @@ class LlamaConfig(PretrainedConfig):
         H2O = False,
         heavy_budget_ratio = 0.11,
         recent_budget_ratio = 0.03,
+        score_coeff = 1,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -196,6 +197,7 @@ class LlamaConfig(PretrainedConfig):
         self.H2O = H2O,
         self.heavy_budget_ratio = heavy_budget_ratio,
         self.recent_budget_ratio = recent_budget_ratio,
+        self.score_coeff = score_coeff,
         
         super().__init__(
             pad_token_id=pad_token_id,
