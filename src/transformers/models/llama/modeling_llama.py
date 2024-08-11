@@ -368,7 +368,6 @@ class LlamaAttention(nn.Module):
         #print(1, query_states.shape, key_states.shape)
         
         if past_key_value is not None:
-            print('use cache')
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
