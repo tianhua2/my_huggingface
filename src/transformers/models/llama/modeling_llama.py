@@ -679,10 +679,10 @@ class LlamaAttention(nn.Module):
             attn_weights = torch.max(attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min))
 
         if attn_weights.shape[-1] > 512:
-            H2O = True
+            H2O = self.config.H2O
         else:
             H2O = False
-        H2O = self.config.H2O
+        #H2O = self.config.H2O
         if H2O:
             ### Heavy + Recent
             if self.layer_idx < 16:
@@ -697,10 +697,10 @@ class LlamaAttention(nn.Module):
             
             heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
             recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
-            #if heavy_budget > 128:
-            #    heavy_budget = 128
-            #if recent_budget > 384:
-            #    recent_budget = 384
+            if heavy_budget > 384:
+                heavy_budget = 384
+            if recent_budget > 128:
+                recent_budget = 128
             # Heavy Hitter Mask (Based on global statistics)
             tmp_attn = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights.dtype)
             tmp_sum = torch.sum(tmp_attn, dim=-2) 
@@ -735,40 +735,9 @@ class LlamaAttention(nn.Module):
             attn_weights = unpack_i4_and_asym_dequantize(attn_weights_quant, scale_attn_weights_list, zero_attn_weights_list)
             #print('dequant attn ', attn_weights)
             #attn_weights = matmul_hadUt(attn_weights_quant)
-        
-        def my_exp(x):
-            x_max = torch.max(x, -1, keepdim=True)[0]
-            input = x_max-x
-            input = input*1.4375
-            int_part = torch.floor(input)
-            int_neg = int_part*-1
-            frac_part = input - int_part
-            res=torch.multiply(torch.pow(2, int_neg),torch.subtract(1, torch.multiply(frac_part, 0.5)))
-            return res
-
-        def my_div(a, b):
-            e_a_raw = torch.log2(a)
-            e_a = torch.floor(e_a_raw)
-            m_a_raw = a / torch.pow(2, e_a)
-            m_a = torch.subtract(m_a_raw,1)
-
-            e_b_raw = torch.log2(b)
-            e_b = torch.floor(e_b_raw)
-            m_b_raw = b / torch.pow(2, e_b)
-            m_b = torch.subtract(m_b_raw,1)
-
-            condition = torch.gt(m_a, m_b)
-            res = torch.where(condition, torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(m_a, m_b)+1), torch.multiply(torch.pow(2, torch.subtract(e_a, e_b)), torch.subtract(1, torch.multiply(torch.subtract(m_b, m_a),0.5))))
-            return res
-
-        def my_softmax(x):
-            exp = my_exp(x)
-            sum = torch.sum(exp,dim=-1,keepdim=True)
-            return my_div(exp, sum)
             
         # upcast attention to fp32
         attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
-        #attn_weights=my_softmax(attn_weights).to(query_states.dtype)
         attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
 
         # real KV drop
@@ -830,7 +799,7 @@ class LlamaAttention(nn.Module):
         if not output_attentions:
             attn_weights = None
 
-        return attn_output, attn_weights, past_key_value
+        return attn_output, tmp_topk, past_key_value
         #return attn_output, key_pre_rope, past_key_value
 
 class LlamaFlashAttention2(LlamaAttention):
