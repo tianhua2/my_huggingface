@@ -429,8 +429,8 @@ class LlamaAttention(nn.Module):
             # Create a mask that will keep the topk tokens' KV, other KV will be assigned to 0
             _, tmp_topk1 = tmp_sum1.topk(k=heavy_budget1, dim=-1)
             zeros1 = torch.zeros_like(tmp_sum1, dtype=torch.bool)
-            mask_bottom1 = zeros1.scatter(-1, tmp_topk1, True).unsqueeze(2)
-            mask_bottom1 = mask_bottom1.expand(mask_bottom1.shape[0], mask_bottom1.shape[1], attn_weights_temp.shape[-2], mask_bottom1.shape[-1])
+            mask_bottom1 = zeros1.scatter(-1, tmp_topk1, True).unsqueeze(2).transpose(-2,-1)
+            mask_bottom1 = mask_bottom1.expand(mask_bottom1.shape[0], mask_bottom1.shape[1], attn_weights_temp.shape[-2], key_states1.shape[-1])
             key_states1[~mask_bottom1]=0
             value_states1[~mask_bottom1]=0
             
@@ -493,8 +493,8 @@ class LlamaAttention(nn.Module):
             tmp_sum2 = torch.sum(tmp_attn2, dim=-2) 
             _, tmp_topk2 = tmp_sum1.topk(k=heavy_budget2, dim=-1)
             zeros2 = torch.zeros_like(tmp_sum2, dtype=torch.bool)
-            mask_bottom2 = zeros2.scatter(-1, tmp_topk2, True).unsqueeze(2)
-            mask_bottom2 = mask_bottom2.expand(mask_bottom2.shape[0], mask_bottom2.shape[1], attn_weights_temp.shape[-2], mask_bottom2.shape[-1])
+            mask_bottom2 = zeros2.scatter(-1, tmp_topk2, True).unsqueeze(2).transpose(-2,-1)
+            mask_bottom2 = mask_bottom2.expand(mask_bottom2.shape[0], mask_bottom2.shape[1], attn_weights_temp.shape[-2], key_states2.shape[-1])
             mask_bottom2 = torch.logical_xor(mask_bottom2, mask_bottom1)
             key_states2[~mask_bottom2]=0
             value_states2[~mask_bottom2]=0
@@ -546,8 +546,8 @@ class LlamaAttention(nn.Module):
             tmp_sum3 = torch.sum(tmp_attn3, dim=-2) 
             _, tmp_topk3 = tmp_sum1.topk(k=heavy_budget3, dim=-1)
             zeros3 = torch.zeros_like(tmp_sum3, dtype=torch.bool)
-            mask_bottom3 = zeros3.scatter(-1, tmp_topk3, True).unsqueeze(2)
-            mask_bottom3 = mask_bottom3.expand(mask_bottom3.shape[0], mask_bottom3.shape[1], attn_weights_temp.shape[-2], mask_bottom3.shape[-1])
+            mask_bottom3 = zeros3.scatter(-1, tmp_topk3, True).unsqueeze(2).transpose(-2,-1)
+            mask_bottom3 = mask_bottom3.expand(mask_bottom3.shape[0], mask_bottom3.shape[1], attn_weights_temp.shape[-2], key_states3.shape[-1])
             mask_bottom3 = torch.logical_xor(mask_bottom3, torch.logical_or(mask_bottom2, mask_bottom1))
             key_states3[~mask_bottom3]=0
             value_states3[~mask_bottom3]=0
