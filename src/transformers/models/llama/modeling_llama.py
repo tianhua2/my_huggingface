@@ -711,7 +711,7 @@ class LlamaAttention(nn.Module):
         tmp_sum = tmp_sum*coeff
             
         _, tmp_topk = tmp_sum.topk(k=heavy_budget, dim=-1)
-
+        token_life = attn_weights.shape[-2]-tmp_topk
         zeros = torch.zeros_like(tmp_sum, dtype=torch.bool)
         mask_bottom = zeros.scatter(-1, tmp_topk, True).unsqueeze(2)
         mask_bottom = mask_bottom.expand(mask_bottom.shape[0], mask_bottom.shape[1], attn_weights.shape[-2], mask_bottom.shape[-1])
@@ -800,7 +800,7 @@ class LlamaAttention(nn.Module):
         if not output_attentions:
             attn_weights = None
 
-        return attn_output, tmp_topk, past_key_value
+        return attn_output, token_life, past_key_value
         #return attn_output, key_pre_rope, past_key_value
 
 class LlamaFlashAttention2(LlamaAttention):
