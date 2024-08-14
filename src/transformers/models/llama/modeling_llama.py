@@ -682,7 +682,7 @@ class LlamaAttention(nn.Module):
             H2O = self.config.H2O
         else:
             H2O = False
-        H2O = self.config.H2O
+        #H2O = self.config.H2O
         #if H2O:
         ### Heavy + Recent
         if self.layer_idx < 16:
@@ -695,14 +695,14 @@ class LlamaAttention(nn.Module):
         #heavy_budget_ratio = self.config.heavy_budget_ratio
         #recent_budget_ratio = self.config.recent_budget_ratio
             
-        heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
-        recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
+        #heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
+        #recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
         #if heavy_budget > 384:
         #    heavy_budget = 384
         #if recent_budget > 128:
         #    recent_budget = 128
-        #heavy_budget = int(heavy_budget_ratio * 128)
-        #recent_budget = int(recent_budget_ratio * 128)
+        heavy_budget = int(heavy_budget_ratio * 120)
+        recent_budget = int(recent_budget_ratio * 120)
         # Heavy Hitter Mask (Based on global statistics)
         tmp_attn = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights.dtype)
         tmp_sum = torch.sum(tmp_attn, dim=-2) 
@@ -714,7 +714,7 @@ class LlamaAttention(nn.Module):
         mask = tmp_sum[:,:,-1][-1] > 1
         mask = mask.unsqueeze(1)
         if H2O:
-            _, tmp_topk = tmp_sum[...,:-recent_budget].topk(k=heavy_budget, dim=-1)
+            _, tmp_topk = tmp_sum[...,:attn_weights.shape[-1]-recent_budget].topk(k=heavy_budget-1, dim=-1)
             token_life = attn_weights.shape[-2]-tmp_topk
             tmp_topk = tmp_topk.sort().values
             mask = mask.expand(tmp_topk.shape)
