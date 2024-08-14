@@ -678,7 +678,7 @@ class LlamaAttention(nn.Module):
             attn_weights = attn_weights + causal_mask
             attn_weights = torch.max(attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min))
 
-        if attn_weights.shape[-1] > 512:
+        if attn_weights.shape[-1] > 128:
             H2O = self.config.H2O
         else:
             H2O = False
@@ -695,12 +695,14 @@ class LlamaAttention(nn.Module):
         #heavy_budget_ratio = self.config.heavy_budget_ratio
         #recent_budget_ratio = self.config.recent_budget_ratio
             
-        heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
-        recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
-        if heavy_budget > 384:
-            heavy_budget = 384
-        if recent_budget > 128:
-            recent_budget = 128
+        #heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
+        #recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
+        #if heavy_budget > 384:
+        #    heavy_budget = 384
+        #if recent_budget > 128:
+        #    recent_budget = 128
+        heavy_budget = int(heavy_budget_ratio * 128)
+        recent_budget = int(recent_budget_ratio * 128)
         # Heavy Hitter Mask (Based on global statistics)
         tmp_attn = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights.dtype)
         tmp_sum = torch.sum(tmp_attn, dim=-2) 
@@ -709,19 +711,25 @@ class LlamaAttention(nn.Module):
         coeff = torch.range(0, coeff_length-1)
         coeff = 1+self.config.score_coeff/(coeff_length-1)*coeff.to(tmp_sum)
         tmp_sum = tmp_sum*coeff
-            
-        _, tmp_topk = tmp_sum.topk(k=heavy_budget, dim=-1)
-        token_life = attn_weights.shape[-2]-tmp_topk
-        zeros = torch.zeros_like(tmp_sum, dtype=torch.bool)
-        mask_bottom = zeros.scatter(-1, tmp_topk, True).unsqueeze(2)
-        mask_bottom = mask_bottom.expand(mask_bottom.shape[0], mask_bottom.shape[1], attn_weights.shape[-2], mask_bottom.shape[-1])
-
-        ones = torch.ones_like(attn_weights, dtype=torch.bool)
-        ones = torch.tril(ones, diagonal=recent_budget)
-        ones = torch.triu(ones, diagonal=-recent_budget)
-        mask_bottom = torch.logical_or(mask_bottom, ones)
-        # mask_bottom = ones
+        mask = tmp_sum[:,:,-1][-1] > 1
+        mask = mask.unsqueeze(1)
         if H2O:
+            _, tmp_topk = tmp_sum[...,:-recent_budget].topk(k=heavy_budget, dim=-1)
+            token_life = attn_weights.shape[-2]-tmp_topk
+            tmp_topk = tmp_topk.sort().values
+            mask = mask.expand(tmp_topk.shape)
+            mask[:,:,0:-1] = False
+            tmp_topk[mask] = attn_weights.shape[-1] - recent_budget
+            zeros = torch.zeros_like(tmp_sum, dtype=torch.bool)
+            mask_bottom = zeros.scatter(-1, tmp_topk, True).unsqueeze(2)
+            mask_bottom = mask_bottom.expand(mask_bottom.shape[0], mask_bottom.shape[1], attn_weights.shape[-2], mask_bottom.shape[-1])
+
+            ones = torch.ones_like(attn_weights, dtype=torch.bool)
+            ones = torch.tril(ones, diagonal=recent_budget)
+            ones = torch.triu(ones, diagonal=-recent_budget)
+            mask_bottom = torch.logical_or(mask_bottom, ones)
+            # mask_bottom = ones
+        
             attn_weights[~mask_bottom] = torch.finfo(attn_weights.dtype).min
 
         #Quantize Softmax input
