@@ -682,7 +682,7 @@ class LlamaAttention(nn.Module):
             H2O = self.config.H2O
         else:
             H2O = False
-        #H2O = self.config.H2O
+        H2O = self.config.H2O
         #if H2O:
         ### Heavy + Recent
         if self.layer_idx < 16:
