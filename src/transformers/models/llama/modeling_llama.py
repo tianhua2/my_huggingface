@@ -711,7 +711,8 @@ class LlamaAttention(nn.Module):
         coeff = torch.range(0, coeff_length-1)
         coeff = 1+self.config.score_coeff/(coeff_length-1)*coeff.to(tmp_sum)
         tmp_sum = tmp_sum*coeff
-        mask = (tmp_sum[:,:,-1] > 2).transpose(-1,-2)
+        mask = tmp_sum[:,:,-1][-1] > 1
+        mask = mask.unsqueeze(1)
         #if H2O:
         _, tmp_topk = tmp_sum.topk(k=heavy_budget-1, dim=-1)
         token_life = attn_weights.shape[-2]-tmp_topk
