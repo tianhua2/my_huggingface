@@ -110,6 +110,22 @@ class OPTConfig(PretrainedConfig):
         eos_token_id=2,
         enable_bias=True,
         layer_norm_elementwise_affine=True,
+        DYNQ=False,
+        HADAMARD=False,
+        KRON=False,
+        KV_BITS1=4,
+        KV_BITS2=3,
+        KV_BITS3=4,
+        KV_BITS4 = 4,
+        heavy_budget_ratio1 = 0.06,
+        heavy_budget_ratio2 = 0.14,
+        heavy_budget_ratio3 = 0.15,
+        REFRESH = False,
+        KV_BITS=3,
+        H2O = False,
+        heavy_budget_ratio = 0.11,
+        recent_budget_ratio = 0.03,
+        score_coeff = 1,        
         **kwargs,
     ):
         super().__init__(
@@ -140,3 +156,20 @@ class OPTConfig(PretrainedConfig):
         # with checkpoints that have been fine-tuned before transformers v4.20.1
         # see https://github.com/facebookresearch/metaseq/pull/164
         self._remove_final_layer_norm = _remove_final_layer_norm
+
+        self.DYNQ=DYNQ,
+        self.HADAMARD=HADAMARD,
+        self.KRON=KRON,
+        self.KV_BITS1=KV_BITS1,
+        self.KV_BITS2=KV_BITS2,
+        self.KV_BITS3=KV_BITS3,
+        self.KV_BITS4 = KV_BITS4,
+        self.heavy_budget_ratio1 = heavy_budget_ratio1,
+        self.heavy_budget_ratio2 = heavy_budget_ratio2,
+        self.heavy_budget_ratio3 = heavy_budget_ratio3,
+        self.REFRESH = REFRESH,
+        self.KV_BITS=KV_BITS,
+        self.H2O = H2O,
+        self.heavy_budget_ratio = heavy_budget_ratio,
+        self.recent_budget_ratio = recent_budget_ratio,
+        self.score_coeff = score_coeff,
