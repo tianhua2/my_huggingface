@@ -235,6 +235,10 @@ class OPTAttention(nn.Module):
             KV_BITS2=self.config.KV_BITS2
             KV_BITS3=self.config.KV_BITS3
             KV_BITS4 = self.config.KV_BITS4
+            heavy_budget_ratio1 = self.config.heavy_budget_ratio1
+            heavy_budget_ratio2 = self.config.heavy_budget_ratio2
+            heavy_budget_ratio3 = self.config.heavy_budget_ratio3
+            
             #if self.layer_idx < 16:
             #    heavy_budget_ratio1 = self.config.heavy_budget_ratio1+0.02
             #    heavy_budget_ratio2 = self.config.heavy_budget_ratio2+0.02
