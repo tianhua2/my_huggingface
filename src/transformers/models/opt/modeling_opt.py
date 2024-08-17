@@ -229,11 +229,13 @@ class OPTAttention(nn.Module):
 
         prob_one_zero = torch.tensor(1e-5)
         prob_zero_one = torch.tensor(1e-6)
+
+        attn_weights_temp = attn_weights_temp.view(bsz, self.num_heads, tgt_len, src_len)
         
         if DYNQ:
             key_states = key_states.view(bsz, self.num_heads, -1, self.head_dim)
             value_states = value_states.view(bsz, self.num_heads, -1, self.head_dim)
-            attn_weights_temp = attn_weights_temp.view(bsz, self.num_heads, tgt_len, src_len)
+            
             #print('key_states.shape: ', key_states.shape)
             KV_BITS1=self.config.KV_BITS1
             KV_BITS2=self.config.KV_BITS2
@@ -498,7 +500,8 @@ class OPTAttention(nn.Module):
                 attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min, device=attn_weights.device)
             )
             #attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
-
+        
+        attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
         if attn_weights.shape[-1] > 128:
             H2O = self.config.H2O
         else:
