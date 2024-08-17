@@ -233,6 +233,8 @@ class OPTAttention(nn.Module):
         if DYNQ:
             key_states = key_states.view(bsz, self.num_heads, -1, self.head_dim)
             value_states = value_states.view(bsz, self.num_heads, -1, self.head_dim)
+            attn_weights_temp = attn_weights_temp.view(bsz, self.num_heads, tgt_len, src_len)
+            #print('key_states.shape: ', key_states.shape)
             KV_BITS1=self.config.KV_BITS1
             KV_BITS2=self.config.KV_BITS2
             KV_BITS3=self.config.KV_BITS3
