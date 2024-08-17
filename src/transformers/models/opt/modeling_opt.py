@@ -231,6 +231,8 @@ class OPTAttention(nn.Module):
         prob_zero_one = torch.tensor(1e-6)
         
         if DYNQ:
+            key_states = key_states.view(bsz, self.num_heads, tgt_len, src_len)
+            value_states = value_states.view(bsz, self.num_heads, tgt_len, src_len)
             KV_BITS1=self.config.KV_BITS1
             KV_BITS2=self.config.KV_BITS2
             KV_BITS3=self.config.KV_BITS3
@@ -470,6 +472,11 @@ class OPTAttention(nn.Module):
             key_states = key_states1 + key_states2 + key_states3 + key_states4
             value_states = value_states1 + value_states2 + value_states3 + value_states4
 
+            proj_shape = (bsz * self.num_heads, -1, self.head_dim)
+            query_states = self._shape(query_states, tgt_len, bsz).view(*proj_shape)
+            key_states = key_states.view(*proj_shape)
+            value_states = value_states.view(*proj_shape)
+        
         src_len = key_states.size(1)
         attn_weights = torch.bmm(query_states, key_states.transpose(1, 2))
 
