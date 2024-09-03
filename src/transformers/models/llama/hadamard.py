@@ -187,7 +187,28 @@ def get_minq_maxq(bits: int, sym: bool):
 
     return minq, maxq
 
-def asym_quantize_and_pack_i4(x: torch.Tensor, bits: int):
+def dec2bin(x, bits):
+    # mask = 2 ** torch.arange(bits).to(x.device, x.dtype)
+    mask = 2 ** torch.arange(bits - 1, -1, -1).to(x)
+    return x.unsqueeze(-1).bitwise_and(mask).ne(0).float()
+
+
+def bin2dec(b, bits):
+    mask = 2 ** torch.arange(bits - 1, -1, -1).to(b)
+    return torch.sum(mask * b, -1)
+
+def bit_flip(q: torch.tensor, bits: int, th_h: float, th_l:float):
+    q_bin = dec2bin(q.to(dtype=torch.int32), bits)
+    flip_prob = torch.rand(q_bin.shape).to(q)
+    th = torch.zeros(q_bin.shape).to(q)
+    th[...,:int(bits/2)]=th_h
+    th[...,int(bits/2):]=th_l
+    mask = flip_prob<th
+    q_bin[mask] = 1-q_bin[mask]
+    q = bin2dec(q_bin, bits)
+    return q
+    
+def asym_quantize_and_pack_i4(x: torch.Tensor, bits: int, th_h: float, th_l:float):
     minq, maxq = get_minq_maxq(bits=bits, sym=False)
     xmax = torch.amax(x, dim=-1, keepdim=True)
     xmin = torch.amin(x, dim=-1, keepdim=True)
@@ -198,6 +219,7 @@ def asym_quantize_and_pack_i4(x: torch.Tensor, bits: int):
     #prob_one_zero = torch.tensor(1e-5).to(q)
     #prob_zero_one = torch.tensor(1e-5).to(q)
     #q = rand_flip_bits(q, bits, prob_one_zero, prob_zero_one) 
+    q = bit_flip(q, bits, th_h, th_l)
     
     # pack int4
     #q = q.to(dtype=torch.uint8)
