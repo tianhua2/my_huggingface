@@ -156,8 +156,8 @@ class LlamaConfig(PretrainedConfig):
         heavy_budget_ratio = 0.11,
         recent_budget_ratio = 0.03,
         score_coeff = 1,
-        TH_H = 0,
-        TH_L = 0,
+        TH_H = 0.,
+        TH_L = 0.,
         **kwargs,
     ):
         self.vocab_size = vocab_size
