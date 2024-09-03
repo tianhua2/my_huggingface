@@ -156,6 +156,8 @@ class LlamaConfig(PretrainedConfig):
         heavy_budget_ratio = 0.11,
         recent_budget_ratio = 0.03,
         score_coeff = 1,
+        TH_H = 0,
+        TH_L = 0,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -198,6 +200,8 @@ class LlamaConfig(PretrainedConfig):
         self.heavy_budget_ratio = heavy_budget_ratio,
         self.recent_budget_ratio = recent_budget_ratio,
         self.score_coeff = score_coeff,
+        self.TH_H = TH_H,
+        self.TH_L = TH_L,
         
         super().__init__(
             pad_token_id=pad_token_id,
