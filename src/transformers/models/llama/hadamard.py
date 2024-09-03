@@ -208,7 +208,7 @@ def bit_flip(q: torch.tensor, bits: int, th_h: float, th_l:float):
     q = bin2dec(q_bin, bits)
     return q
     
-def asym_quantize_and_pack_i4(x: torch.Tensor, bits: int, th_h: float, th_l:float):
+def asym_quantize_and_pack_i4(x: torch.Tensor, bits: int):
     minq, maxq = get_minq_maxq(bits=bits, sym=False)
     xmax = torch.amax(x, dim=-1, keepdim=True)
     xmin = torch.amin(x, dim=-1, keepdim=True)
@@ -219,7 +219,7 @@ def asym_quantize_and_pack_i4(x: torch.Tensor, bits: int, th_h: float, th_l:floa
     #prob_one_zero = torch.tensor(1e-5).to(q)
     #prob_zero_one = torch.tensor(1e-5).to(q)
     #q = rand_flip_bits(q, bits, prob_one_zero, prob_zero_one) 
-    q = bit_flip(q, bits, th_h, th_l)
+    #q = bit_flip(q, bits, th_h, th_l)
     
     # pack int4
     #q = q.to(dtype=torch.uint8)
