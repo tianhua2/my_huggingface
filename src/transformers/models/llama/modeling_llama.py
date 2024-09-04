@@ -455,6 +455,8 @@ class LlamaAttention(nn.Module):
                 key_states1 = matmul_hadUt(key_states_refresh)
             else:
                 if KRON:
+                    print(key_states_refresh.dtype)
+                    print(kron_mat_inv.dtype)
                     key_states1 = key_states_refresh @ kron_mat_inv
                 else:
                     key_states1 = key_states_refresh
