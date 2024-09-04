@@ -415,58 +415,7 @@ class LlamaAttention(nn.Module):
                 heavy_budget_ratio1 = self.config.heavy_budget_ratio1-0.02
                 heavy_budget_ratio2 = self.config.heavy_budget_ratio2-0.02
                 heavy_budget_ratio3 = self.config.heavy_budget_ratio3-0.02
-        
-            #Quantize masked key
-            key_states1=key_states.detach().clone()
-            value_states1=value_states.detach().clone()                
-            if HADAMARD:
-                key_states_refresh = matmul_hadU(key_states1)
-            else:
-                if KRON:
-                    key_states_refresh = key_states1 @ kron_mat
-                else:
-                    key_states_refresh = key_states1
-            #print('hadamard ket_states')
-            #print(key_states_refresh)
-            key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS1)
-            key_states_refresh = bit_flip(key_states_refresh, KV_BITS1, TH_H, TH_L)
-            key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list).to(key_states)
-            if HADAMARD:
-                key_states1 = matmul_hadUt(key_states_refresh)
-            else:
-                if KRON:
-                    key_states1 = key_states_refresh @ kron_mat_inv
-                else:
-                    key_states1 = key_states_refresh
-            #key_states1[~mask_bottom1]=0
-            #print('original key_state')
-            #print(key_states)
-            #print(key_states.shape)
-            #print('quantized key_states1')
-            #print(key_states1)
-            #print(key_states1.shape)
 
-            #Quantize masked value
-            if HADAMARD:
-                value_states_refresh = matmul_hadU(value_states1)
-            else:
-                if KRON:
-                    value_states_refresh = value_states1 @ kron_mat
-                else:
-                    value_states_refresh = value_states1
-            value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS1)
-            value_states_refresh = bit_flip(value_states_refresh, KV_BITS1, TH_H, TH_L)
-            value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list).to(value_states)
-            if HADAMARD:
-                value_states1 = matmul_hadUt(value_states_refresh)
-            else:
-                if KRON:
-                    value_states1 = value_states_refresh @ kron_mat_inv
-                else:
-                    value_states1 = value_states_refresh
-            key_states = key_states1
-            value_states = value_states1 
-        else:    
             key_states1=key_states.detach().clone()
             value_states1=value_states.detach().clone()    
             
