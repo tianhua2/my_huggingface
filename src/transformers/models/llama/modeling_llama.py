@@ -685,7 +685,7 @@ class LlamaAttention(nn.Module):
             H2O = self.config.H2O
         else:
             H2O = False
-        #H2O = self.config.H2O
+        H2O = self.config.H2O
         #if H2O:
         ### Heavy + Recent
         if self.layer_idx < 16:
@@ -698,12 +698,14 @@ class LlamaAttention(nn.Module):
         #heavy_budget_ratio = self.config.heavy_budget_ratio
         #recent_budget_ratio = self.config.recent_budget_ratio
             
-        heavy_budget = min(int(heavy_budget_ratio * attn_weights.shape[-1]), int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
-        recent_budget = min(int(recent_budget_ratio * attn_weights.shape[-1]), int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
-        #if heavy_budget > 384:
-        #    heavy_budget = 384
-        #if recent_budget > 128:
-        #    recent_budget = 128
+        #heavy_budget = min(int(heavy_budget_ratio * attn_weights.shape[-1]), int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
+        #recent_budget = min(int(recent_budget_ratio * attn_weights.shape[-1]), int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
+        heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
+        recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
+        if heavy_budget > int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)):
+            heavy_budget = int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
+        if recent_budget > int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)):
+            recent_budget = int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
         #heavy_budget = int(heavy_budget_ratio * 120)
         #recent_budget = int(recent_budget_ratio * 120)
         # Heavy Hitter Mask (Based on global statistics)
