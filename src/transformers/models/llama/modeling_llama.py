@@ -680,11 +680,12 @@ class LlamaAttention(nn.Module):
             attn_weights = attn_weights + causal_mask
             attn_weights = torch.max(attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min))
 
-        if attn_weights.shape[-1] > 128:
+        CACHE_SIZE = self.config.CACHE_SIZE
+        if attn_weights.shape[-1] > CACHE_SIZE:
             H2O = self.config.H2O
         else:
             H2O = False
-        H2O = self.config.H2O
+        #H2O = self.config.H2O
         #if H2O:
         ### Heavy + Recent
         if self.layer_idx < 16:
@@ -697,8 +698,8 @@ class LlamaAttention(nn.Module):
         #heavy_budget_ratio = self.config.heavy_budget_ratio
         #recent_budget_ratio = self.config.recent_budget_ratio
             
-        heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
-        recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
+        heavy_budget = min(int(heavy_budget_ratio * attn_weights.shape[-1]), int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
+        recent_budget = min(int(recent_budget_ratio * attn_weights.shape[-1]), int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
         #if heavy_budget > 384:
         #    heavy_budget = 384
         #if recent_budget > 128:
