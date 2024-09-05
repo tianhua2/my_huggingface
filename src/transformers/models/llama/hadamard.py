@@ -201,7 +201,7 @@ def bin2dec(b, bits):
 
 def bit_flip(q: torch.tensor, bits: int, th_h: float, th_l:float):
     mask_decbin = 2 ** torch.arange(bits - 1, -1, -1, device = 'cuda')
-    q_bin = q.to(dtype=torch.int32).unsqueeze(-1).bitwise_and(mask_decbin).ne(0).float()
+    q_bin = q.to(dtype=torch.int32).unsqueeze(-1).bitwise_and(mask_decbin).ne(0).to(q)
     flip_prob = torch.cuda.FloatTensor(q_bin.shape).uniform_()
     th = torch.cuda.FloatTensor(q_bin.shape).zero_()
     th[...,:-int(bits/4)]=th_h
