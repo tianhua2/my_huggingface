@@ -142,7 +142,7 @@ def kron_mat_calc(size, dtype=torch.float16):
 def is_pow2(n):
     return (n & (n - 1) == 0) and (n > 0)
 
-def rand_flip_bits(xhard, bit_width=None, prob_one_zero=None, prob_zero_one=None, has_sign=True):
+def bit_flip(xhard, bit_width=None, prob_one_zero=None, prob_zero_one=None, has_sign=False):
     act_width = bit_width
     if has_sign:
         sign = xhard.sign()
@@ -166,7 +166,8 @@ def rand_flip_bits(xhard, bit_width=None, prob_one_zero=None, prob_zero_one=None
     xhard = xhard.abs()
     xhard_new = 0
     for b in range(act_width):
-        rand = torch.rand(xhard.shape).to(xhard)
+        #rand = torch.rand(xhard.shape).to(xhard)
+        rand = torch.cuda.FloatTensor(xhard.shape).uniform_()
         bit_map = (xhard.int())%2
         xhard = xhard/2
         bit_map = bit_map * (rand>=prob_one_zero) + ((bit_map-1) * (rand<prob_one_zero)).clamp(min=0)
@@ -198,7 +199,7 @@ def bin2dec(b, bits):
     mask = 2 ** torch.arange(bits - 1, -1, -1, device = 'cuda')
     return torch.sum(mask * b, -1)
 
-def bit_flip(q: torch.tensor, bits: int, th_h: float, th_l:float):
+def rand_flip_bits(q: torch.tensor, bits: int, th_h: float, th_l:float):
     mask_decbin = 2 ** torch.arange(bits - 1, -1, -1, device = 'cuda')
     q_bin = q.to(dtype=torch.int32).unsqueeze(-1).bitwise_and(mask_decbin).ne(0).float()
     flip_prob = torch.cuda.FloatTensor(q_bin.shape).uniform_()
