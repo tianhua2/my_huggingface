@@ -700,14 +700,24 @@ class LlamaAttention(nn.Module):
             
         #heavy_budget = min(int(heavy_budget_ratio * attn_weights.shape[-1]), int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
         #recent_budget = min(int(recent_budget_ratio * attn_weights.shape[-1]), int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
-        heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
-        recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
-        if heavy_budget > int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)):
-            #print('over size', CACHE_SIZE, heavy_budget_ratio, recent_budget_ratio, int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
+
+        #This one works
+        #heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
+        #recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
+        
+        if H2O:
             heavy_budget = int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
-        if recent_budget > int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)):
-            #print('over size', int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
             recent_budget = int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
+        else:
+            heavy_budget = int(attn_weights.shape[-1]*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
+            recent_budget = int(attn_weights.shape[-1]*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
+            
+        #if heavy_budget > int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)):
+            #print('over size', CACHE_SIZE, heavy_budget_ratio, recent_budget_ratio, int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
+        #    heavy_budget = int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
+        #if recent_budget > int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)):
+            #print('over size', int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
+        #    recent_budget = int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
         #heavy_budget = int(heavy_budget_ratio * 120)
         #recent_budget = int(recent_budget_ratio * 120)
         # Heavy Hitter Mask (Based on global statistics)
