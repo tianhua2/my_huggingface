@@ -204,8 +204,8 @@ def bit_flip(q: torch.tensor, bits: int, th_h: float, th_l:float):
     q_bin = q.to(dtype=torch.int32).unsqueeze(-1).bitwise_and(mask_decbin).ne(0).to(q)
     flip_prob = torch.cuda.FloatTensor(q_bin.shape).uniform_()
     th = torch.cuda.FloatTensor(q_bin.shape).zero_()
-    th[...,:-int(bits/4)]=th_h
-    th[...,-int(bits/4):]=th_l
+    th[...,:-int(bits/2)]=th_h
+    th[...,-int(bits/2):]=th_l
     mask = flip_prob<th
     q_bin[mask] = 1-q_bin[mask]
     q = torch.sum(mask_decbin * q_bin, -1)
