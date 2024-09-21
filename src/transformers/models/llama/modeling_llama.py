@@ -723,7 +723,7 @@ class LlamaAttention(nn.Module):
         # Heavy Hitter Mask (Based on global statistics)
         tmp_attn = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights.dtype)
         #tmp_attn = torch.round(tmp_attn*8)/8
-        tmp_attn_exp = torch.round(torch.log2(x))+15
+        tmp_attn_exp = torch.round(torch.log2(tmp_attn))+15
         tmp_attn_exp_round = torch.round(tmp_attn_exp/2)*2-15
         tmp_attn = 2** tmp_attn_exp_round
         tmp_sum = torch.sum(tmp_attn, dim=-2) 
