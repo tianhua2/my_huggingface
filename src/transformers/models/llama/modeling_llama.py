@@ -408,13 +408,13 @@ class LlamaAttention(nn.Module):
             KV_BITS3=self.config.KV_BITS3
             KV_BITS4 = self.config.KV_BITS4
             if self.layer_idx < 16:
-                heavy_budget_ratio1 = self.config.heavy_budget_ratio1+0.02
-                heavy_budget_ratio2 = self.config.heavy_budget_ratio2+0.02
-                heavy_budget_ratio3 = self.config.heavy_budget_ratio3+0.02
+                heavy_budget_ratio1 = self.config.heavy_budget_ratio1
+                heavy_budget_ratio2 = self.config.heavy_budget_ratio2
+                heavy_budget_ratio3 = self.config.heavy_budget_ratio3
             else:
-                heavy_budget_ratio1 = self.config.heavy_budget_ratio1-0.02
-                heavy_budget_ratio2 = self.config.heavy_budget_ratio2-0.02
-                heavy_budget_ratio3 = self.config.heavy_budget_ratio3-0.02
+                heavy_budget_ratio1 = self.config.heavy_budget_ratio1
+                heavy_budget_ratio2 = self.config.heavy_budget_ratio2
+                heavy_budget_ratio3 = self.config.heavy_budget_ratio3
 
             key_states1=key_states.detach().clone()
             value_states1=value_states.detach().clone()    
@@ -511,7 +511,7 @@ class LlamaAttention(nn.Module):
                     key_states_refresh = key_states2
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS2)
             if TH_L != 0:
-                key_states_refresh = bit_flip(key_states_refresh, KV_BITS2, TH_H, TH_L)
+                key_states_refresh = bit_flip(key_states_refresh, KV_BITS2, TH_H*2, TH_L*2)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list).to(key_states)
             if HADAMARD:
                 key_states2 = matmul_hadUt(key_states_refresh)
@@ -530,7 +530,7 @@ class LlamaAttention(nn.Module):
                     value_states_refresh = value_states2
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS2)
             if TH_L != 0:
-                value_states_refresh = bit_flip(value_states_refresh, KV_BITS2, TH_H, TH_L)
+                value_states_refresh = bit_flip(value_states_refresh, KV_BITS2, TH_H*2, TH_L*2)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list).to(value_states)
             if HADAMARD:
                 value_states2 = matmul_hadUt(value_states_refresh)
@@ -564,7 +564,7 @@ class LlamaAttention(nn.Module):
                     key_states_refresh = key_states3
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS3)
             if TH_L != 0:
-                key_states_refresh = bit_flip(key_states_refresh, KV_BITS3, TH_H, TH_L)
+                key_states_refresh = bit_flip(key_states_refresh, KV_BITS3, TH_H*4, TH_L*4)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list).to(key_states)
             if HADAMARD:
                 key_states3 = matmul_hadUt(key_states_refresh)
@@ -583,7 +583,7 @@ class LlamaAttention(nn.Module):
                     value_states_refresh = value_states3
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS3)
             if TH_L != 0:
-                value_states_refresh = bit_flip(value_states_refresh, KV_BITS3, TH_H, TH_L)
+                value_states_refresh = bit_flip(value_states_refresh, KV_BITS3, TH_H*4, TH_L*4)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list).to(value_states)
             if HADAMARD:
                 value_states3 = matmul_hadUt(value_states_refresh)
@@ -610,7 +610,7 @@ class LlamaAttention(nn.Module):
                     key_states_refresh = key_states4
             key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS4)
             if TH_L != 0:
-                key_states_refresh = bit_flip(key_states_refresh, KV_BITS4, TH_H, TH_L)
+                key_states_refresh = bit_flip(key_states_refresh, KV_BITS4, TH_H*8, TH_L*8)
             key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list).to(key_states)
             if HADAMARD:
                 key_states4 = matmul_hadUt(key_states_refresh)
@@ -629,7 +629,7 @@ class LlamaAttention(nn.Module):
                     value_states_refresh = value_states4
             value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS4)
             if TH_L != 0:
-                value_states_refresh = bit_flip(value_states_refresh, KV_BITS4, TH_H, TH_L)
+                value_states_refresh = bit_flip(value_states_refresh, KV_BITS4, TH_H*8, TH_L*8)
             value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list).to(value_states)
             if HADAMARD:
                 value_states4 = matmul_hadUt(value_states_refresh)
