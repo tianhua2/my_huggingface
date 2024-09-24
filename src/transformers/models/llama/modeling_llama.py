@@ -374,10 +374,10 @@ class LlamaAttention(nn.Module):
         #print(2, query_states.shape, key_states.shape)
 
 
-        print('before repeat', key_states.shape)    
+        #print('before repeat', key_states.shape)    
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
-        print('after repeat', key_states.shape)
+        #print('after repeat', key_states.shape)
         
         #Dynamic Quantization
         # MatMul original key query to get attention weights
