@@ -200,13 +200,13 @@ def bin2dec(b, bits):
     return torch.sum(mask * b, -1)
 
 def bit_flip(q: torch.tensor, bits: int, th_h: float, th_l:float):
-    mask_decbin = 2 ** torch.arange(bits - 1, -1, -1).to(q)
+    mask_decbin = 2 ** torch.arange(bits - 1, -1, -1).to(q.device)
     q_bin = q.to(dtype=torch.int32).unsqueeze(-1).bitwise_and(mask_decbin).ne(0).to(q)
-    flip_prob = torch.cuda.FloatTensor(q_bin.shape).uniform_()
-    th = torch.cuda.FloatTensor(q_bin.shape).zero_()
+    flip_prob = torch.cuda.FloatTensor(q_bin.shape).uniform_().to(q.device)
+    th = torch.cuda.FloatTensor(q_bin.shape).zero_().to(q.device)
     th[...,:-int(bits/2)]=th_h
     th[...,-int(bits/2):]=th_l
-    mask = flip_prob<th
+    mask = (flip_prob<th).to(q.device)
     q_bin[mask] = 1-q_bin[mask]
     q = torch.sum(mask_decbin * q_bin, -1)
     return q
