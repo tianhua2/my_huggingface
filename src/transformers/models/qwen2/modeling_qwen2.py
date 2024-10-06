@@ -51,6 +51,8 @@ if is_flash_attn_2_available():
 
     _flash_supports_window_size = "window_size" in list(inspect.signature(flash_attn_func).parameters)
 
+from .hadamard import matmul_hadU, matmul_hadUt, get_minq_maxq, asym_quantize_and_pack_i4, unpack_i4_and_asym_dequantize, kron_mat_calc, rand_flip_bits, bit_flip
+print('running my llama')
 
 logger = logging.get_logger(__name__)
 
