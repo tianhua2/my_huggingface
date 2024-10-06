@@ -280,6 +280,296 @@ class Qwen2Attention(nn.Module):
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
+        #attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+
+        #if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
+        #    raise ValueError(
+        #        f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
+        #        f" {attn_weights.size()}"
+        #    )
+
+        #if attention_mask is not None:
+        #    if attention_mask.size() != (bsz, 1, q_len, kv_seq_len):
+        #        raise ValueError(
+        #            f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.size()}"
+        #        )
+
+        #    attn_weights = attn_weights + attention_mask
+
+        #Dynamic Quantization
+        # MatMul original key query to get attention weights
+        attn_weights_temp = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+        # Attention Mask        
+        if attn_weights_temp.size() != (bsz, self.num_heads, q_len, kv_seq_len):
+            raise ValueError(
+                f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
+                f" {attn_weights_temp.size()}"
+            )
+
+        if attention_mask is not None:
+            if attention_mask.size() != (bsz, 1, q_len, kv_seq_len):
+                raise ValueError(
+                    f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.size()}"
+                )
+
+            attn_weights_temp = attn_weights_temp + attention_mask        
+        
+        DYNQ=self.config.DYNQ
+        HADAMARD = self.config.HADAMARD
+        
+        KRON = self.config.KRON
+        kron_size= key_states.shape[-1]
+        kron_dtype = key_states.dtype
+        kron_mat, kron_mat_inv = kron_mat_calc(kron_size, kron_dtype)  #50% sparse hadamard
+        #kron_mat, kron_mat_inv = kron_mat_calc(kron_size/2, kron_dtype)  #75% sparse hadamard
+        kron_mat = kron_mat.to(key_states)
+        kron_mat_inv = kron_mat_inv.to(key_states)
+
+        TH_H = self.config.TH_H
+        TH_L = self.config.TH_L
+        
+        if DYNQ:
+            KV_BITS1=self.config.KV_BITS1
+            KV_BITS2=self.config.KV_BITS2
+            KV_BITS3=self.config.KV_BITS3
+            KV_BITS4 = self.config.KV_BITS4
+            if self.layer_idx < 16:
+                heavy_budget_ratio1 = self.config.heavy_budget_ratio1+0.02
+                heavy_budget_ratio2 = self.config.heavy_budget_ratio2+0.02
+                heavy_budget_ratio3 = self.config.heavy_budget_ratio3+0.02
+            else:
+                heavy_budget_ratio1 = self.config.heavy_budget_ratio1-0.02
+                heavy_budget_ratio2 = self.config.heavy_budget_ratio2-0.02
+                heavy_budget_ratio3 = self.config.heavy_budget_ratio3-0.02
+
+            key_states1=key_states.detach().clone()
+            value_states1=value_states.detach().clone()    
+            
+            heavy_budget1 = int(heavy_budget_ratio1 * attn_weights_temp.shape[-1])
+            # Original Softmax result
+            tmp_attn1 = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights_temp.dtype)
+            
+            # Sum the original attention score of one token 
+            tmp_sum1 = torch.sum(tmp_attn1, dim=-2) 
+            
+            # Create a mask that will keep the topk tokens' KV, other KV will be assigned to 0
+            _, tmp_topk1 = tmp_sum1.topk(k=heavy_budget1, dim=-1)
+            zeros1 = torch.zeros_like(tmp_sum1, dtype=torch.bool)
+            mask_bottom1 = zeros1.scatter(-1, tmp_topk1, True).unsqueeze(2).transpose(-2,-1)
+            mask_bottom1 = mask_bottom1.expand(mask_bottom1.shape[0], mask_bottom1.shape[1], key_states1.shape[-2], key_states1.shape[-1])
+            key_states1[~mask_bottom1]=0
+            value_states1[~mask_bottom1]=0
+            
+            #print('masked key_states1')
+            #print(key_states1)
+            #print(key_states1.shape)
+            
+            #Quantize masked key
+            if HADAMARD:
+                key_states_refresh = matmul_hadU(key_states1)
+            else:
+                if KRON:
+                    key_states_refresh = key_states1 @ kron_mat
+                else:
+                    key_states_refresh = key_states1
+            #print('hadamard ket_states')
+            #print(key_states_refresh)
+            key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS1)
+            if TH_L != 0:
+                key_states_refresh = bit_flip(key_states_refresh, KV_BITS1, TH_H, TH_L)
+            key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list).to(key_states)
+            if HADAMARD:
+                key_states1 = matmul_hadUt(key_states_refresh)
+            else:
+                if KRON:
+                    key_states1 = key_states_refresh @ kron_mat_inv
+                else:
+                    key_states1 = key_states_refresh
+            #key_states1[~mask_bottom1]=0
+            #print('original key_state')
+            #print(key_states)
+            #print(key_states.shape)
+            #print('quantized key_states1')
+            #print(key_states1)
+            #print(key_states1.shape)
+
+            #Quantize masked value
+            if HADAMARD:
+                value_states_refresh = matmul_hadU(value_states1)
+            else:
+                if KRON:
+                    value_states_refresh = value_states1 @ kron_mat
+                else:
+                    value_states_refresh = value_states1
+            value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS1)
+            if TH_L != 0:
+                value_states_refresh = bit_flip(value_states_refresh, KV_BITS1, TH_H, TH_L)
+            value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list).to(value_states)
+            if HADAMARD:
+                value_states1 = matmul_hadUt(value_states_refresh)
+            else:
+                if KRON:
+                    value_states1 = value_states_refresh @ kron_mat_inv
+                else:
+                    value_states1 = value_states_refresh
+            key_states1[~mask_bottom1]=0
+            value_states1[~mask_bottom1]=0
+            
+            key_states2=key_states.detach().clone()
+            value_states2=value_states.detach().clone()
+
+            heavy_budget2 = int(heavy_budget_ratio2 * attn_weights_temp.shape[-1])
+            tmp_attn2 = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights_temp.dtype)
+            tmp_sum2 = torch.sum(tmp_attn2, dim=-2) 
+            _, tmp_topk2 = tmp_sum1.topk(k=heavy_budget2, dim=-1)
+            zeros2 = torch.zeros_like(tmp_sum2, dtype=torch.bool)
+            mask_bottom2 = zeros2.scatter(-1, tmp_topk2, True).unsqueeze(2).transpose(-2,-1)
+            mask_bottom2 = mask_bottom2.expand(mask_bottom2.shape[0], mask_bottom2.shape[1], key_states2.shape[-2], key_states2.shape[-1])
+            mask_bottom2 = torch.logical_xor(mask_bottom2, mask_bottom1)
+            key_states2[~mask_bottom2]=0
+            value_states2[~mask_bottom2]=0
+            if HADAMARD:
+                key_states_refresh = matmul_hadU(key_states2)
+            else:
+                if KRON:
+                    key_states_refresh = key_states2 @ kron_mat
+                else:
+                    key_states_refresh = key_states2
+            key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS2)
+            if TH_L != 0:
+                key_states_refresh = bit_flip(key_states_refresh, KV_BITS2, TH_H, TH_L)
+            key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list).to(key_states)
+            if HADAMARD:
+                key_states2 = matmul_hadUt(key_states_refresh)
+            else:
+                if KRON:
+                    key_states2 = key_states_refresh @ kron_mat_inv
+                else:
+                    key_states2 = key_states_refresh
+            #key_states2[~mask_bottom2]=0
+            if HADAMARD:
+                value_states_refresh = matmul_hadU(value_states2)
+            else:
+                if KRON:
+                    value_states_refresh = value_states2 @ kron_mat
+                else:
+                    value_states_refresh = value_states2
+            value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS2)
+            if TH_L != 0:
+                value_states_refresh = bit_flip(value_states_refresh, KV_BITS2, TH_H, TH_L)
+            value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list).to(value_states)
+            if HADAMARD:
+                value_states2 = matmul_hadUt(value_states_refresh)
+            else:
+                if KRON:
+                    value_states2 = value_states_refresh @ kron_mat_inv
+                else:
+                    value_states2 = value_states_refresh
+            key_states2[~mask_bottom2]=0
+            value_states2[~mask_bottom2]=0
+
+            key_states3=key_states.detach().clone()
+            value_states3=value_states.detach().clone()
+
+            heavy_budget3 = int(heavy_budget_ratio3 * attn_weights_temp.shape[-1])
+            tmp_attn3 = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights_temp.dtype)
+            tmp_sum3 = torch.sum(tmp_attn3, dim=-2) 
+            _, tmp_topk3 = tmp_sum1.topk(k=heavy_budget3, dim=-1)
+            zeros3 = torch.zeros_like(tmp_sum3, dtype=torch.bool)
+            mask_bottom3 = zeros3.scatter(-1, tmp_topk3, True).unsqueeze(2).transpose(-2,-1)
+            mask_bottom3 = mask_bottom3.expand(mask_bottom3.shape[0], mask_bottom3.shape[1], key_states3.shape[-2], key_states3.shape[-1])
+            mask_bottom3 = torch.logical_xor(mask_bottom3, torch.logical_or(mask_bottom2, mask_bottom1))
+            key_states3[~mask_bottom3]=0
+            value_states3[~mask_bottom3]=0
+            if HADAMARD:
+                key_states_refresh = matmul_hadU(key_states3)
+            else:
+                if KRON:
+                    key_states_refresh = key_states3 @ kron_mat
+                else:
+                    key_states_refresh = key_states3
+            key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS3)
+            if TH_L != 0:
+                key_states_refresh = bit_flip(key_states_refresh, KV_BITS3, TH_H, TH_L)
+            key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list).to(key_states)
+            if HADAMARD:
+                key_states3 = matmul_hadUt(key_states_refresh)
+            else:
+                if KRON:
+                    key_states3 = key_states_refresh @ kron_mat_inv
+                else:
+                    key_states3 = key_states_refresh
+            #key_states2[~mask_bottom2]=0
+            if HADAMARD:
+                value_states_refresh = matmul_hadU(value_states3)
+            else:
+                if KRON:
+                    value_states_refresh = value_states3 @ kron_mat
+                else:
+                    value_states_refresh = value_states3
+            value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS3)
+            if TH_L != 0:
+                value_states_refresh = bit_flip(value_states_refresh, KV_BITS3, TH_H, TH_L)
+            value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list).to(value_states)
+            if HADAMARD:
+                value_states3 = matmul_hadUt(value_states_refresh)
+            else:
+                if KRON:
+                    value_states3 = value_states_refresh @ kron_mat_inv
+                else:
+                    value_states3 = value_states_refresh
+            key_states3[~mask_bottom3]=0
+            value_states3[~mask_bottom3]=0
+
+            
+            key_states4=key_states.detach().clone()
+            value_states4=value_states.detach().clone()
+            mask_bottom4 = torch.logical_or(mask_bottom3, torch.logical_or(mask_bottom2, mask_bottom1))
+            key_states4[mask_bottom4] = 0
+            value_states4[mask_bottom4] = 0
+            if HADAMARD:
+                key_states_refresh = matmul_hadU(key_states4)
+            else:
+                if KRON:
+                    key_states_refresh = key_states4 @ kron_mat
+                else:
+                    key_states_refresh = key_states4
+            key_states_refresh, scale_key_list, zero_key_list = asym_quantize_and_pack_i4(key_states_refresh, bits=KV_BITS4)
+            if TH_L != 0:
+                key_states_refresh = bit_flip(key_states_refresh, KV_BITS4, TH_H, TH_L)
+            key_states_refresh = unpack_i4_and_asym_dequantize(key_states_refresh, scale_key_list, zero_key_list).to(key_states)
+            if HADAMARD:
+                key_states4 = matmul_hadUt(key_states_refresh)
+            else:
+                if KRON:
+                    key_states4 = key_states_refresh @ kron_mat_inv
+                else:
+                    key_states4 = key_states_refresh
+            #key_states4[mask_bottom3] = 0
+            if HADAMARD:
+                value_states_refresh = matmul_hadU(value_states4)
+            else:
+                if KRON:
+                    value_states_refresh = value_states4 @ kron_mat
+                else:
+                    value_states_refresh = value_states4
+            value_states_refresh, scale_value_list, zero_value_list = asym_quantize_and_pack_i4(value_states_refresh, bits=KV_BITS4)
+            if TH_L != 0:
+                value_states_refresh = bit_flip(value_states_refresh, KV_BITS4, TH_H, TH_L)
+            value_states_refresh = unpack_i4_and_asym_dequantize(value_states_refresh, scale_value_list, zero_value_list).to(value_states)
+            if HADAMARD:
+                value_states4 = matmul_hadUt(value_states_refresh)
+            else:
+                if KRON:
+                    value_states4 = value_states_refresh @ kron_mat_inv
+                else:
+                    value_states4 = value_states_refresh
+            key_states4[mask_bottom3] = 0
+            value_states4[mask_bottom3] = 0
+            
+            key_states = key_states1 + key_states2 + key_states3 + key_states4
+            value_states = value_states1 + value_states2 + value_states3 + value_states4
+        
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
 
         if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
@@ -296,6 +586,77 @@ class Qwen2Attention(nn.Module):
 
             attn_weights = attn_weights + attention_mask
 
+        CACHE_SIZE = self.config.CACHE_SIZE
+        if attn_weights.shape[-1] > CACHE_SIZE:
+            H2O = self.config.H2O
+        else:
+            H2O = False
+        #H2O = self.config.H2O
+        #if H2O:
+        ### Heavy + Recent
+        if self.layer_idx < 16:
+            heavy_budget_ratio = self.config.heavy_budget_ratio+0.01
+            recent_budget_ratio = self.config.recent_budget_ratio+0.01
+        else:
+            heavy_budget_ratio = self.config.heavy_budget_ratio-0.01
+            recent_budget_ratio = self.config.recent_budget_ratio-0.01
+
+        #heavy_budget_ratio = self.config.heavy_budget_ratio
+        #recent_budget_ratio = self.config.recent_budget_ratio
+            
+        #heavy_budget = min(int(heavy_budget_ratio * attn_weights.shape[-1]), int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
+        #recent_budget = min(int(recent_budget_ratio * attn_weights.shape[-1]), int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
+
+        #This one works
+        #heavy_budget = int(heavy_budget_ratio * attn_weights.shape[-1])
+        #recent_budget = int(recent_budget_ratio * attn_weights.shape[-1])
+        
+        if H2O:
+            heavy_budget = int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
+            recent_budget = int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
+        else:
+            heavy_budget = int(attn_weights.shape[-1]*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
+            recent_budget = int(attn_weights.shape[-1]*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
+            
+        #if heavy_budget > int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)):
+            #print('over size', CACHE_SIZE, heavy_budget_ratio, recent_budget_ratio, int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
+        #    heavy_budget = int(CACHE_SIZE*heavy_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
+        #if recent_budget > int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)):
+            #print('over size', int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio)))
+        #    recent_budget = int(CACHE_SIZE*recent_budget_ratio/(heavy_budget_ratio+recent_budget_ratio))
+        #heavy_budget = int(heavy_budget_ratio * 120)
+        #recent_budget = int(recent_budget_ratio * 120)
+        # Heavy Hitter Mask (Based on global statistics)
+        tmp_attn = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights.dtype)
+        tmp_attn = torch.round(tmp_attn*32)/32
+        tmp_sum = torch.sum(tmp_attn, dim=-2) 
+           
+        coeff_length = tmp_sum.shape[-1]
+        coeff = torch.range(0, coeff_length-1)
+        coeff = 1+self.config.score_coeff/(coeff_length-1)*coeff.to(tmp_sum)
+        tmp_sum = tmp_sum*coeff
+        #mask = tmp_sum[...,-1] > 1
+        #mask = mask.unsqueeze(-1)
+        #if H2O:
+        _, tmp_topk = tmp_sum.topk(k=heavy_budget, dim=-1)
+        token_life = attn_weights.shape[-2]-tmp_topk
+        #tmp_topk = tmp_topk.sort().values
+        #mask = mask.expand(tmp_topk.shape)
+        #mask[:,:,0:-1] = False
+        #if attn_weights.shape[-1] > recent_budget:
+        #tmp_topk[mask] = attn_weights.shape[-1]
+        zeros = torch.zeros_like(tmp_sum, dtype=torch.bool)
+        mask_bottom = zeros.scatter(-1, tmp_topk, True).unsqueeze(2)
+        mask_bottom = mask_bottom.expand(mask_bottom.shape[0], mask_bottom.shape[1], attn_weights.shape[-2], mask_bottom.shape[-1])
+
+        ones = torch.ones_like(attn_weights, dtype=torch.bool)
+        ones = torch.tril(ones, diagonal=recent_budget)
+        ones = torch.triu(ones, diagonal=-recent_budget)
+        mask_bottom = torch.logical_or(mask_bottom, ones)
+            # mask_bottom = ones
+        if H2O:
+            attn_weights[~mask_bottom] = torch.finfo(attn_weights.dtype).min
+        
         # upcast attention to fp32
         attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
         attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
