@@ -113,6 +113,25 @@ class Qwen2Config(PretrainedConfig):
         sliding_window=4096,
         max_window_layers=28,
         attention_dropout=0.0,
+        DYNQ=False,
+        HADAMARD=False,
+        KRON=False,
+        KV_BITS1=4,
+        KV_BITS2=3,
+        KV_BITS3=4,
+        KV_BITS4 = 4,
+        heavy_budget_ratio1 = 0.06,
+        heavy_budget_ratio2 = 0.14,
+        heavy_budget_ratio3 = 0.15,
+        REFRESH = False,
+        KV_BITS=3,
+        H2O = False,
+        heavy_budget_ratio = 0.11,
+        recent_budget_ratio = 0.03,
+        score_coeff = 1,
+        TH_H = 0.,
+        TH_L = 0.,
+        CACHE_SIZE = 100000,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -136,6 +155,26 @@ class Qwen2Config(PretrainedConfig):
         self.use_cache = use_cache
         self.rope_theta = rope_theta
         self.attention_dropout = attention_dropout
+
+        self.DYNQ=DYNQ,
+        self.HADAMARD=HADAMARD,
+        self.KRON=KRON,
+        self.KV_BITS1=KV_BITS1,
+        self.KV_BITS2=KV_BITS2,
+        self.KV_BITS3=KV_BITS3,
+        self.KV_BITS4 = KV_BITS4,
+        self.heavy_budget_ratio1 = heavy_budget_ratio1,
+        self.heavy_budget_ratio2 = heavy_budget_ratio2,
+        self.heavy_budget_ratio3 = heavy_budget_ratio3,
+        self.REFRESH = REFRESH,
+        self.KV_BITS=KV_BITS,
+        self.H2O = H2O,
+        self.heavy_budget_ratio = heavy_budget_ratio,
+        self.recent_budget_ratio = recent_budget_ratio,
+        self.score_coeff = score_coeff,
+        self.TH_H = TH_H,
+        self.TH_L = TH_L,
+        self.CACHE_SIZE = CACHE_SIZE,
 
         super().__init__(
             tie_word_embeddings=tie_word_embeddings,
