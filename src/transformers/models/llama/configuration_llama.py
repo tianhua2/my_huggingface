@@ -144,7 +144,7 @@ class LlamaConfig(PretrainedConfig):
         HADAMARD=False,
         KRON=False,
         KV_BITS1=4,
-        KV_BITS2=3,
+        KV_BITS2=4,
         KV_BITS3=4,
         KV_BITS4 = 4,
         heavy_budget_ratio1 = 0.06,
