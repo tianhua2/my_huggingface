@@ -749,6 +749,18 @@ class LlamaAttention(nn.Module):
         #mask = mask.unsqueeze(-1)
         #if H2O:
         _, tmp_topk = tmp_sum.topk(k=heavy_budget, dim=-1)
+
+        flattened = tmp_topk.transpose(1, 2).reshape(-1, tmp_topk.shape[1])
+        num_bins = tmp_attn.shape[-1]
+        flattened=flattened.to(torch.float)
+        hist = torch.histc(flattened, bins=num_bins)
+        threshold = tmp_attn.shape[1]/2
+        greater_than_threshold = hist > threshold
+        count_greater = greater_than_threshold.sum().item()
+        percentage = (count_greater / hist.numel())
+        with open('/content/history.txt', 'a') as f:
+            f.write(f"{percentage}\n")
+        
         token_life = attn_weights.shape[-2]-tmp_topk
         #tmp_topk = tmp_topk.sort().values
         #mask = mask.expand(tmp_topk.shape)
