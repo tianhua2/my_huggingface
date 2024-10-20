@@ -758,9 +758,10 @@ class LlamaAttention(nn.Module):
         greater_than_threshold = hist > threshold
         count_greater = greater_than_threshold.sum().item()
         percentage = (count_greater / hist.numel())
-        with open('/content/history.txt', 'a') as f:
+        with open('/content/history.csv', 'a') as f:
             f.write(f"{percentage}\n")
-        
+        with open('/content/seq_length.csv', 'a') as f:
+            f.write(f"{str(tmp_attn.size()[0]}\n")
         token_life = attn_weights.shape[-2]-tmp_topk
         #tmp_topk = tmp_topk.sort().values
         #mask = mask.expand(tmp_topk.shape)
