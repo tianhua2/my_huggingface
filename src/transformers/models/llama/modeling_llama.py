@@ -761,9 +761,9 @@ class LlamaAttention(nn.Module):
         with open('/content/history.csv', 'a') as f:
             f.write(f"{percentage}\n")
         with open('/content/seq_length.csv', 'a') as f:
-            f.write(f"{str(tmp_attn.size()[0])}\n")
+            f.write(f"{str(tmp_attn.size()[-1])}\n")
         with open('/content/kept_length.csv', 'a') as f:
-            f.write(f"{str(tmp_topk.size()[0])}\n")    
+            f.write(f"{str(tmp_topk.size()[-1])}\n")    
         token_life = attn_weights.shape[-2]-tmp_topk
         #tmp_topk = tmp_topk.sort().values
         #mask = mask.expand(tmp_topk.shape)
