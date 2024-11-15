@@ -425,7 +425,8 @@ class LlamaAttention(nn.Module):
 
             key_states1=key_states.detach().clone()
             value_states1=value_states.detach().clone()    
-            
+            print(heavy_budget_ratio1)
+            print(attn_weights_temp.shape[-1])
             heavy_budget1 = int(heavy_budget_ratio1 * attn_weights_temp.shape[-1])
             # Original Softmax result
             tmp_attn1 = nn.functional.softmax(attn_weights_temp, dim=-1, dtype=torch.float32).to(attn_weights_temp.dtype)
